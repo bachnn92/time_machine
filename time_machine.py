@@ -31,8 +31,6 @@ def create_local_repo(repo_path, remote_url, branch_name="master", start_date=No
     os.chdir(repo_path)
     subprocess.run(["git", "init"])
     subprocess.run(["git", "checkout", "-b", branch_name])
-    # env = configure_git_user("bachnn92", "bachnn92@gmail.com", "2025-01-01 00:00:00")
-    # subprocess.run(["git", "commit", "-m", "Initial commit", "--allow-empty"], env=env)
     subprocess.run(["git", "remote", "add", "origin", remote_url])
     create_local_commits( remote_url, f"{branch_name}", start_date, num_days)
     
@@ -46,21 +44,19 @@ def create_local_commits(remote_url, branch_name="master", start_date=None, num_
         current = start + timedelta(days=i)
         date_str = current.strftime("%Y-%m-%d %H:%M:%S")
         if day_of_week(current.year, current.month, current.day) in [0, 1]:
-            if random_binary(0.1):
-                env = configure_git_user("bachnn92", "bachnn92@gmail.com", date_str)
-                random_number = random.randint(0, 3)
-                for i in range(random_number):
-                    subprocess.run(["git", "commit", "-m", f"Commit {i}", "--allow-empty"], env=env)
+            commit_proc(0.2, 3, configure_git_user(username, useremail, date_str))
             continue
         
-        if random_binary(0.8):
-            env = configure_git_user("bachnn92", "bachnn92@gmail.com", date_str)
-            random_number = random.randint(0, 9)
-            for i in range(random_number):
-                subprocess.run(["git", "commit", "-m", f"Commit {i}", "--allow-empty"], env=env)
+        commit_proc(0.8, 9, configure_git_user(username, useremail, date_str))
         if current.day == 1:
             push_to_remote(remote_url, branch_name)
     push_to_remote(remote_url, f"{branch_name}")
+    
+def commit_proc (rate, range,env):
+    if random_binary(rate):
+        random_number = random.randint(1, range)
+        for i in range(random_number):
+            subprocess.run(["git", "commit", "-m", f"Commit {i}", "--allow-empty"], env=env)
 
 def push_to_remote(remote_url, branch_name="master"):
     subprocess.run(["git", "push", "-fu", remote_url, branch_name])
@@ -73,6 +69,8 @@ if __name__ == "__main__":
     workspace = "workspace"
     remote_url = "git@github.com:bachnn92/dummy-2026.git"
     branch_name = "master"
+    username = "bachnn92"
+    useremail = "bachnn92@gmail.com"
     start = datetime(2026, 1, 1, 12, 0, 0)
     # end = datetime(2026, 12, 31, 12, 0, 0)
     end = datetime.now().replace(hour=12, minute=0, second=0, microsecond=0)
