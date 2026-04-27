@@ -121,12 +121,16 @@ def create_8bit_ui(matrix: list[list[int]], year: int) -> None:
     
     pygame.init()
     
-    # Dimensions: 52 weeks * 10px, 7 days * 10px, plus space for labels
+    # Dimensions: 52 weeks * 10px, 7 days * 10px, plus space for labels and padding
     cell_size = 10
     label_width = 40
     label_height = 20
-    width = 52 * cell_size + label_width
-    height = 7 * cell_size + label_height
+    bot_padding = 10
+    right_padding = 20
+    grid_width = 52 * cell_size
+    grid_height = 7 * cell_size
+    width = grid_width + label_width + right_padding
+    height = grid_height + label_height + bot_padding
     screen = pygame.display.set_mode((width, height))
     pygame.display.set_caption("8-Bit Commit Matrix")
     
@@ -140,6 +144,9 @@ def create_8bit_ui(matrix: list[list[int]], year: int) -> None:
     
     # Font
     font = pygame.font.SysFont('monospace', 12)
+    
+    dragging = False
+    drag_state = False  # True to mark, False to unmark
     
     running = True
     while running:
@@ -156,18 +163,39 @@ def create_8bit_ui(matrix: list[list[int]], year: int) -> None:
                         day = (y - label_height) // cell_size
                         if 0 <= week < 52 and 0 <= day < 7:
                             pos = (week, day)
-                            if pos in marked:
-                                marked.remove(pos)
-                            else:
+                            dragging = True
+                            drag_state = pos not in marked  # If not marked, start marking; if marked, start unmarking
+                            if drag_state:
                                 marked.add(pos)
+                            else:
+                                marked.discard(pos)
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if event.button == 1:
+                    dragging = False
+            elif event.type == pygame.MOUSEMOTION:
+                if dragging:
+                    x, y = event.pos
+                    if x >= label_width and y >= label_height:
+                        week = (x - label_width) // cell_size
+                        day = (y - label_height) // cell_size
+                        if 0 <= week < 52 and 0 <= day < 7:
+                            pos = (week, day)
+                            if drag_state:
+                                marked.add(pos)
+                            else:
+                                marked.discard(pos)
         
         screen.fill(black)
         
-        # Draw grid lines
-        for i in range(8):  # 7 days + 1
-            pygame.draw.line(screen, green, (label_width, label_height + i * cell_size), (width, label_height + i * cell_size))
-        for i in range(53):  # 52 weeks + 1
-            pygame.draw.line(screen, green, (label_width + i * cell_size, label_height), (label_width + i * cell_size, height))
+        # Draw year
+        year_text = font.render(str(year), True, white)
+        screen.blit(year_text, (5, 5))
+        
+        # # Draw grid lines
+        # for i in range(8):  # 7 days + 1
+        #     pygame.draw.line(screen, green, (label_width, label_height + i * cell_size), (width, label_height + i * cell_size))
+        # for i in range(53):  # 52 weeks + 1
+        #     pygame.draw.line(screen, green, (label_width + i * cell_size, label_height), (label_width + i * cell_size, height))
         
         # Draw cells
         for day in range(7):
@@ -182,7 +210,7 @@ def create_8bit_ui(matrix: list[list[int]], year: int) -> None:
             text = font.render(day, True, white)
             screen.blit(text, (5, label_height + i * cell_size + 2))
         
-        for week in range(0, 52, 4):  # Every 4 weeks
+        for week in range(0, 53, 4):  # Every 4 weeks
             text = font.render(str(week), True, white)
             screen.blit(text, (label_width + week * cell_size + 2, 5))
         
@@ -192,6 +220,6 @@ def create_8bit_ui(matrix: list[list[int]], year: int) -> None:
 
 if __name__ == "__main__":
     # Example usage
-    year = 2020
+    year = 2015
     matrix = generate_commit_matrix(year)
     create_8bit_ui(matrix, year)
