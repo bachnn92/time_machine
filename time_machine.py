@@ -110,7 +110,7 @@ class TimeMachine:
                 env = self.configure_git_user(self.username, self.useremail, formatted)
                 num_commits = 4
                 for i in range(num_commits):
-                    subprocess.run(["git", "commit", "-m", f"Commit {date_index}", "--allow-empty"], env=env)
+                    subprocess.run(["git", "commit", "-m", f"Commit {date_index}-{i}", "--allow-empty"], env=env)
             except Exception:
                 pass
 
