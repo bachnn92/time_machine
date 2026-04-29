@@ -89,7 +89,7 @@ class TimeMachine:
         self.push_to_remote()
     
     def create_matrix_commits(self, filename: str = "date_data.json") -> None:
-        """Creates commits based on marked dates from date_data.json."""
+        """Creates commits based on marked dates and levels from date_data.json."""
         filepath = os.path.join(self.original_dir, filename) if hasattr(self, 'original_dir') else filename
         if not os.path.exists(filepath):
             print(f"File {filepath} not found.")
@@ -97,26 +97,40 @@ class TimeMachine:
 
         try:
             with open(filepath, 'r') as f:
-                dates = json.load(f)
-        except Exception:
-            print(f"Error reading {filepath}")
+                data = json.load(f)
+        except Exception as e:
+            print(f"Error reading {filepath}: {e}")
             return
 
-        dates.sort()
-        for date_index, date_str in enumerate(dates, start=1):
+        # Ensure data is sorted by date
+        try:
+            data.sort(key=lambda d: d["date"])
+        except Exception:
+            print("Invalid JSON format: expected list of {date, level}")
+            return
+
+        for date_index, entry in enumerate(data, start=1):
             try:
-                dt = datetime.fromisoformat(date_str)
+                dt = datetime.fromisoformat(entry["date"])
+                level = int(entry.get("level", 1))
                 formatted = dt.strftime("%Y-%m-%d %H:%M:%S")
+
+                # Configure git environment with timestamp
                 env = self.configure_git_user(self.username, self.useremail, formatted)
-                num_commits = 4
-                for i in range(num_commits):
-                    subprocess.run(["git", "commit", "-m", f"Commit {date_index}-{i}", "--allow-empty"], env=env)
-            except Exception:
-                pass
+
+                # Create commits equal to the level
+                for i in range(level):
+                    subprocess.run(
+                        ["git", "commit", "-m", f"Commit {date_index}-{i}", "--allow-empty"],
+                        env=env,
+                        check=True
+                    )
+            except Exception as e:
+                print(f"Skipping entry {entry}: {e}")
 
 if __name__ == "__main__":
     workspace = "workspace"
-    remote_url = "git@github.com:bachnn92/helloworld-2020.git"
+    remote_url = "git@github.com:bachnn92/cactuar-2016.git"
     branch_name = "master"
     username = "Bach Nguyen Ngoc"
     useremail = "bachnn92@gmail.com"
