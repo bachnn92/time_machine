@@ -61,12 +61,23 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
     
     # Matrix state variables
     matrix = None
-    marked = set()
+    marked: dict[tuple[int, int], int] = {}
     cell_size = 10
     label_width = 40
     label_height = 20
     exit_button_rect = pygame.Rect(screen_width - 260, 8, 120, 28)
     settings_button_rect = pygame.Rect(screen_width - 130, 8, 120, 28)
+    level_colors = [
+        (20, 20, 20),
+        (0, 70, 0),
+        (0, 110, 0),
+        (0, 160, 0),
+        (0, 220, 0),
+    ]
+
+    drag_left_active = False
+    drag_right_active = False
+    drag_last_cell: tuple[int, int] | None = None
     
     clock = pygame.time.Clock()
     running = True
@@ -131,8 +142,8 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                 grid_y = matrix_y + label_height
 
                 if event.type == pygame.MOUSEBUTTONDOWN:
+                    x, y = event.pos
                     if event.button == 1:
-                        x, y = event.pos
                         if exit_button_rect.collidepoint((x, y)):
                             save_marked_dates(marked, year, file_text)
                             running = False
@@ -146,10 +157,41 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                             day = (y - grid_y) // cell_size
                             if 0 <= week < 52 and 0 <= day < 7:
                                 pos = (week, day)
-                                if pos in marked:
-                                    marked.remove(pos)
-                                else:
-                                    marked.add(pos)
+                                new_level = min(marked.get(pos, 0) + 1, 4)
+                                marked[pos] = new_level
+                                drag_left_active = True
+                                drag_last_cell = pos
+                    elif event.button == 3:
+                        if grid_x <= x < grid_x + grid_width and grid_y <= y < grid_y + grid_height:
+                            week = (x - grid_x) // cell_size
+                            day = (y - grid_y) // cell_size
+                            if 0 <= week < 52 and 0 <= day < 7:
+                                pos = (week, day)
+                                marked.pop(pos, None)
+                                drag_right_active = True
+                                drag_last_cell = pos
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    if event.button == 1:
+                        drag_left_active = False
+                    elif event.button == 3:
+                        drag_right_active = False
+                    if not drag_left_active and not drag_right_active:
+                        drag_last_cell = None
+                elif event.type == pygame.MOUSEMOTION:
+                    if not (drag_left_active or drag_right_active):
+                        continue
+                    x, y = event.pos
+                    if grid_x <= x < grid_x + grid_width and grid_y <= y < grid_y + grid_height:
+                        week = (x - grid_x) // cell_size
+                        day = (y - grid_y) // cell_size
+                        if 0 <= week < 52 and 0 <= day < 7:
+                            pos = (week, day)
+                            if pos != drag_last_cell:
+                                if drag_left_active:
+                                    marked[pos] = min(marked.get(pos, 0) + 1, 4)
+                                elif drag_right_active:
+                                    marked.pop(pos, None)
+                                drag_last_cell = pos
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         # Save and return to settings
@@ -158,6 +200,9 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                         year_text = str(year)
                         file_text = filename
                         active_field = None
+                        drag_left_active = False
+                        drag_right_active = False
+                        drag_last_cell = None
         
         screen.fill(black)
         
@@ -223,7 +268,8 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
             # Draw cells
             for day in range(7):
                 for week in range(52):
-                    color = green if (week, day) in marked else black
+                    level = marked.get((week, day), 0)
+                    color = level_colors[level]
                     rect = pygame.Rect(grid_x + week * cell_size, grid_y + day * cell_size, cell_size, cell_size)
                     pygame.draw.rect(screen, color, rect)
             
@@ -255,7 +301,7 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
             settings_text_rect = settings_text.get_rect(center=settings_button_rect.center)
             screen.blit(settings_text, settings_text_rect)
             
-            instructions = small_font.render("Click to mark | EXIT saves+closes | ESC/SETTINGS to go back", True, dark_gray)
+            instructions = small_font.render("Left click/drag: +level (1-4) | Right click/drag: erase | EXIT saves+closes", True, dark_gray)
             instructions_rect = instructions.get_rect(center=(screen_width // 2, screen_height - 12))
             screen.blit(instructions, instructions_rect)
         

@@ -7,6 +7,10 @@ from datetime import datetime
 from .daytime import day_of_week_index
 
 
+def _clamp_level(level: int) -> int:
+    return max(0, min(4, level))
+
+
 def _get_filepath(filename: str) -> str:
     """Resolve filepath: if filename contains '/', use as-is; otherwise prefix with 'plan/'."""
     if "/" in filename:
@@ -14,44 +18,69 @@ def _get_filepath(filename: str) -> str:
     return f"plan/{filename}"
 
 
-def load_marked_dates(filename: str = "data.json") -> set[tuple[int, int]]:
-    """Loads marked dates from JSON file and returns set of (week, day) tuples.
+def load_marked_dates(filename: str = "data.json") -> dict[tuple[int, int], int]:
+    """Loads marked dates and levels from JSON file.
     
     Args:
         filename: Simple filename (stored in plan/) or full path (used as-is)
     """
     filepath = _get_filepath(filename)
     if not os.path.exists(filepath):
-        return set()
+        return {}
     try:
         with open(filepath, 'r') as f:
-            dates = json.load(f)
-        marked = set()
-        for date_str in dates:
-            dt = datetime.fromisoformat(date_str)
-            week = min(dt.isocalendar()[1] - 1, 51)
-            day = day_of_week_index(dt.year, dt.month, dt.day)
-            marked.add((week, day))
+            data = json.load(f)
+
+        marked: dict[tuple[int, int], int] = {}
+
+        # Backward-compatible format: ["ISO_DATE", ...]
+        if isinstance(data, list) and (not data or isinstance(data[0], str)):
+            for date_str in data:
+                dt = datetime.fromisoformat(date_str)
+                week = min(dt.isocalendar()[1] - 1, 51)
+                day = day_of_week_index(dt.year, dt.month, dt.day)
+                marked[(week, day)] = 4
+            return marked
+
+        # New format: [{"date": "ISO_DATE", "level": N}, ...]
+        if isinstance(data, list):
+            for item in data:
+                if not isinstance(item, dict):
+                    continue
+                date_str = item.get("date")
+                if not isinstance(date_str, str):
+                    continue
+                level = _clamp_level(int(item.get("level", 4)))
+                if level <= 0:
+                    continue
+                dt = datetime.fromisoformat(date_str)
+                week = min(dt.isocalendar()[1] - 1, 51)
+                day = day_of_week_index(dt.year, dt.month, dt.day)
+                marked[(week, day)] = level
+
         return marked
     except:
-        return set()
+        return {}
 
 
-def save_marked_dates(marked: set[tuple[int, int]], year: int, filename: str = "data.json") -> None:
-    """Saves marked (week, day) positions as dates to JSON file.
+def save_marked_dates(marked: dict[tuple[int, int], int], year: int, filename: str = "data.json") -> None:
+    """Saves marked (week, day) positions and levels to JSON file.
     
     Args:
-        marked: Set of (week, day) tuples to save
+        marked: Mapping of (week, day) -> level (1..4)
         year: Year for date conversion
         filename: Simple filename (stored in plan/) or full path (used as-is)
     """
     dates = []
-    for week, day in marked:
+    for (week, day), level in marked.items():
+        level = _clamp_level(level)
+        if level <= 0:
+            continue
         # Convert to date: day_of_week 0=Sun, isocalendar day 1=Mon, 7=Sun
         iso_day = 7 if day == 0 else day
         try:
             dt = datetime.fromisocalendar(year, week + 1, iso_day)
-            dates.append(dt.isoformat())
+            dates.append({"date": dt.isoformat(), "level": level})
         except:
             pass
     
