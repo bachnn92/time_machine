@@ -1,9 +1,9 @@
 
 """Pygame-based UI for the 8-bit commit matrix editor."""
 
-from module.data_persistence import load_marked_dates, save_marked_dates
-from module.matrix_logic import generate_commit_matrix
-from module.visualization import plot_matrix
+from .module.data_persistence import load_marked_dates, save_marked_dates
+from .module.matrix_logic import generate_commit_matrix
+from .module.visualization import plot_matrix
 
 def create_8bit_ui(matrix: list[list[int]], year: int) -> None:
     """Creates an 8-bit style UI using Pygame to display the commit matrix."""
@@ -86,9 +86,3 @@ def create_8bit_ui(matrix: list[list[int]], year: int) -> None:
     
     pygame.quit()
 
-if __name__ == "__main__":
-    # Example usage
-    plan_name = "data.json"
-    year = 2015
-    matrix = generate_commit_matrix(year)
-    create_8bit_ui(matrix, year)
