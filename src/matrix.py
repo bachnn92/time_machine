@@ -34,6 +34,7 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
     green = (0, 255, 0)
     gray = (100, 100, 100)
     dark_gray = (50, 50, 50)
+    cell_border = (35, 35, 35)
     
     # Fonts
     font = pygame.font.SysFont('monospace', 16)
@@ -70,10 +71,11 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
     button_gap = 8
     button_x = screen_width - button_width - 12
     bottom_margin = 46
-    new_button_y = screen_height - (button_height * 3 + button_gap * 2 + bottom_margin)
+    new_button_y = screen_height - (button_height * 4 + button_gap * 3 + bottom_margin)
     new_button_rect = pygame.Rect(button_x, new_button_y, button_width, button_height)
-    settings_button_rect = pygame.Rect(button_x, new_button_y + button_height + button_gap, button_width, button_height)
-    exit_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 2, button_width, button_height)
+    default_button_rect = pygame.Rect(button_x, new_button_y + button_height + button_gap, button_width, button_height)
+    settings_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 2, button_width, button_height)
+    exit_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 3, button_width, button_height)
     level_colors = [
         (20, 20, 20),
         (0, 70, 0),
@@ -152,6 +154,11 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                         if new_button_rect.collidepoint((x, y)):
                             marked.clear()
                             save_marked_dates(marked, year, file_text)
+                            drag_left_active = False
+                            drag_right_active = False
+                            drag_last_cell = None
+                        elif default_button_rect.collidepoint((x, y)):
+                            marked = load_marked_dates("default-data.json")
                             drag_left_active = False
                             drag_right_active = False
                             drag_last_cell = None
@@ -258,22 +265,6 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
             grid_x = matrix_x + label_width
             grid_y = matrix_y + label_height
             
-            # Draw grid
-            for i in range(8):
-                pygame.draw.line(
-                    screen,
-                    green,
-                    (grid_x, grid_y + i * cell_size),
-                    (grid_x + grid_width, grid_y + i * cell_size),
-                )
-            for i in range(53):
-                pygame.draw.line(
-                    screen,
-                    green,
-                    (grid_x + i * cell_size, grid_y),
-                    (grid_x + i * cell_size, grid_y + grid_height),
-                )
-            
             # Draw cells
             for day in range(7):
                 for week in range(52):
@@ -281,6 +272,7 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                     color = level_colors[level]
                     rect = pygame.Rect(grid_x + week * cell_size, grid_y + day * cell_size, cell_size, cell_size)
                     pygame.draw.rect(screen, color, rect)
+                    pygame.draw.rect(screen, cell_border, rect, 1)
             
             # Draw labels
             days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
@@ -304,6 +296,12 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
             new_text_rect = new_text.get_rect(center=new_button_rect.center)
             screen.blit(new_text, new_text_rect)
 
+            default_button_color = green if default_button_rect.collidepoint(pygame.mouse.get_pos()) else white
+            pygame.draw.rect(screen, default_button_color, default_button_rect, 2)
+            default_text = small_font.render("DEFAULT", True, default_button_color)
+            default_text_rect = default_text.get_rect(center=default_button_rect.center)
+            screen.blit(default_text, default_text_rect)
+
             settings_button_color = green if settings_button_rect.collidepoint(pygame.mouse.get_pos()) else white
             pygame.draw.rect(screen, settings_button_color, settings_button_rect, 2)
             settings_text = small_font.render("SETTINGS", True, settings_button_color)
@@ -316,7 +314,7 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
             exit_text_rect = exit_text.get_rect(center=exit_button_rect.center)
             screen.blit(exit_text, exit_text_rect)
             
-            instructions = small_font.render("Left drag:+level | Right drag:erase | NEW clears+save | EXIT saves+closes", True, dark_gray)
+            instructions = small_font.render("Left drag:+level | Right drag:erase | DEFAULT restores default-data.json", True, dark_gray)
             instructions_rect = instructions.get_rect(center=(screen_width // 2, screen_height - 12))
             screen.blit(instructions, instructions_rect)
         
