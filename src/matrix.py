@@ -65,8 +65,15 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
     cell_size = 10
     label_width = 40
     label_height = 20
-    exit_button_rect = pygame.Rect(screen_width - 260, 8, 120, 28)
-    settings_button_rect = pygame.Rect(screen_width - 130, 8, 120, 28)
+    button_width = 120
+    button_height = 28
+    button_gap = 8
+    button_x = screen_width - button_width - 12
+    bottom_margin = 46
+    new_button_y = screen_height - (button_height * 3 + button_gap * 2 + bottom_margin)
+    new_button_rect = pygame.Rect(button_x, new_button_y, button_width, button_height)
+    settings_button_rect = pygame.Rect(button_x, new_button_y + button_height + button_gap, button_width, button_height)
+    exit_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 2, button_width, button_height)
     level_colors = [
         (20, 20, 20),
         (0, 70, 0),
@@ -134,17 +141,21 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                 grid_height = 7 * cell_size
                 matrix_width = label_width + grid_width
                 matrix_height = label_height + grid_height
-                top_padding = 40
-                bottom_padding = 30
                 matrix_x = max((screen_width - matrix_width) // 2, 0)
-                matrix_y = top_padding + max((screen_height - top_padding - bottom_padding - matrix_height) // 2, 0)
+                matrix_y = max((screen_height - matrix_height) // 3, 0)
                 grid_x = matrix_x + label_width
                 grid_y = matrix_y + label_height
 
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     x, y = event.pos
                     if event.button == 1:
-                        if exit_button_rect.collidepoint((x, y)):
+                        if new_button_rect.collidepoint((x, y)):
+                            marked.clear()
+                            save_marked_dates(marked, year, file_text)
+                            drag_left_active = False
+                            drag_right_active = False
+                            drag_last_cell = None
+                        elif exit_button_rect.collidepoint((x, y)):
                             save_marked_dates(marked, year, file_text)
                             running = False
                         elif settings_button_rect.collidepoint((x, y)):
@@ -242,10 +253,8 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
             grid_height = 7 * cell_size
             matrix_width = label_width + grid_width
             matrix_height = label_height + grid_height
-            top_padding = 40
-            bottom_padding = 30
             matrix_x = max((screen_width - matrix_width) // 2, 0)
-            matrix_y = top_padding + max((screen_height - top_padding - bottom_padding - matrix_height) // 2, 0)
+            matrix_y = max((screen_height - matrix_height) // 3, 0)
             grid_x = matrix_x + label_width
             grid_y = matrix_y + label_height
             
@@ -289,19 +298,25 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
             screen.blit(title, title_rect)
 
             # Settings button
-            exit_button_color = green if exit_button_rect.collidepoint(pygame.mouse.get_pos()) else white
-            pygame.draw.rect(screen, exit_button_color, exit_button_rect, 2)
-            exit_text = small_font.render("EXIT", True, exit_button_color)
-            exit_text_rect = exit_text.get_rect(center=exit_button_rect.center)
-            screen.blit(exit_text, exit_text_rect)
+            new_button_color = green if new_button_rect.collidepoint(pygame.mouse.get_pos()) else white
+            pygame.draw.rect(screen, new_button_color, new_button_rect, 2)
+            new_text = small_font.render("NEW", True, new_button_color)
+            new_text_rect = new_text.get_rect(center=new_button_rect.center)
+            screen.blit(new_text, new_text_rect)
 
             settings_button_color = green if settings_button_rect.collidepoint(pygame.mouse.get_pos()) else white
             pygame.draw.rect(screen, settings_button_color, settings_button_rect, 2)
             settings_text = small_font.render("SETTINGS", True, settings_button_color)
             settings_text_rect = settings_text.get_rect(center=settings_button_rect.center)
             screen.blit(settings_text, settings_text_rect)
+
+            exit_button_color = green if exit_button_rect.collidepoint(pygame.mouse.get_pos()) else white
+            pygame.draw.rect(screen, exit_button_color, exit_button_rect, 2)
+            exit_text = small_font.render("EXIT", True, exit_button_color)
+            exit_text_rect = exit_text.get_rect(center=exit_button_rect.center)
+            screen.blit(exit_text, exit_text_rect)
             
-            instructions = small_font.render("Left click/drag: +level (1-4) | Right click/drag: erase | EXIT saves+closes", True, dark_gray)
+            instructions = small_font.render("Left drag:+level | Right drag:erase | NEW clears+save | EXIT saves+closes", True, dark_gray)
             instructions_rect = instructions.get_rect(center=(screen_width // 2, screen_height - 12))
             screen.blit(instructions, instructions_rect)
         
