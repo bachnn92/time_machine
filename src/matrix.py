@@ -1,32 +1,18 @@
-import random
+
 from datetime import datetime, timedelta
 import json
 import os
+import random
 
-def day_of_week_index(year: int, month: int, day: int) -> int:
-    """Returns the day of the week index for a given date using Zeller's Congruence.
-    
-    Returns 0 for Sunday, 1 for Monday, ..., 6 for Saturday.
-    """
-    if month < 3:
-        month += 12
-        year -= 1
-    k: int = year % 100
-    j: int = year // 100
-    h: int = (day + (13*(month + 1)) // 5 + k + k//4 + j//4 + 5*j) % 7
-    # Adjust to 0=Sunday, 6=Saturday
-    return (h - 1) % 7
+from module.daytime import day_of_week_index
+from module.random import random_binary
 
-def random_binary(probability_of_1: float) -> int:
-    """Returns 1 with given probability, 0 otherwise."""
-    return 1 if random.random() < probability_of_1 else 0
-
-def load_marked_dates(filename: str = "date_data.json") -> set[tuple[int, int]]:
+def load_marked_dates(filename: str = "data.json") -> set[tuple[int, int]]:
     """Loads marked dates from JSON file and returns set of (week, day) tuples."""
-    if not os.path.exists(filename):
+    if not os.path.exists(f"plan/{filename}"):
         return set()
     try:
-        with open(filename, 'r') as f:
+        with open(f"plan/{filename}", 'r') as f:
             dates = json.load(f)
         marked = set()
         for date_str in dates:
@@ -38,7 +24,7 @@ def load_marked_dates(filename: str = "date_data.json") -> set[tuple[int, int]]:
     except:
         return set()
 
-def save_marked_dates(marked: set[tuple[int, int]], year: int, filename: str = "date_data.json") -> None:
+def save_marked_dates(marked: set[tuple[int, int]], year: int, filename: str = "data.json") -> None:
     """Saves marked (week, day) positions as dates to JSON file."""
     dates = []
     for week, day in marked:
@@ -54,7 +40,7 @@ def save_marked_dates(marked: set[tuple[int, int]], year: int, filename: str = "
             dates.append(dt.isoformat())
         except:
             pass
-    with open(filename, 'w') as f:
+    with open(f"plan/{filename}", 'w') as f:
         json.dump(dates, f)
 
 def generate_commit_matrix(year: int) -> list[list[int]]:
@@ -192,6 +178,7 @@ def create_8bit_ui(matrix: list[list[int]], year: int) -> None:
 
 if __name__ == "__main__":
     # Example usage
-    year = 2020
+    plan_name = "data.json"
+    year = 2015
     matrix = generate_commit_matrix(year)
     create_8bit_ui(matrix, year)
