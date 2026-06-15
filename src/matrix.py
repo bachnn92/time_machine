@@ -65,6 +65,7 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
     cell_size = 10
     label_width = 40
     label_height = 20
+    exit_button_rect = pygame.Rect(screen_width - 260, 8, 120, 28)
     settings_button_rect = pygame.Rect(screen_width - 130, 8, 120, 28)
     
     clock = pygame.time.Clock()
@@ -132,7 +133,10 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:
                         x, y = event.pos
-                        if settings_button_rect.collidepoint((x, y)):
+                        if exit_button_rect.collidepoint((x, y)):
+                            save_marked_dates(marked, year, file_text)
+                            running = False
+                        elif settings_button_rect.collidepoint((x, y)):
                             save_marked_dates(marked, year, file_text)
                             state = STATE_SETTINGS
                             year_text = str(year)
@@ -184,7 +188,7 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
             screen.blit(start_text, start_rect)
             
             instructions = small_font.render("Click/Tab to switch | Enter/Click START to begin", True, dark_gray)
-            instructions_rect = instructions.get_rect(center=(screen_width // 2, settings_panel_y + settings_panel_height - 8))
+            instructions_rect = instructions.get_rect(center=(screen_width // 2, screen_height - 12))
             screen.blit(instructions, instructions_rect)
         
         elif state == STATE_MATRIX:
@@ -239,13 +243,19 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
             screen.blit(title, title_rect)
 
             # Settings button
+            exit_button_color = green if exit_button_rect.collidepoint(pygame.mouse.get_pos()) else white
+            pygame.draw.rect(screen, exit_button_color, exit_button_rect, 2)
+            exit_text = small_font.render("EXIT", True, exit_button_color)
+            exit_text_rect = exit_text.get_rect(center=exit_button_rect.center)
+            screen.blit(exit_text, exit_text_rect)
+
             settings_button_color = green if settings_button_rect.collidepoint(pygame.mouse.get_pos()) else white
             pygame.draw.rect(screen, settings_button_color, settings_button_rect, 2)
             settings_text = small_font.render("SETTINGS", True, settings_button_color)
             settings_text_rect = settings_text.get_rect(center=settings_button_rect.center)
             screen.blit(settings_text, settings_text_rect)
             
-            instructions = small_font.render("Click to mark | ESC or SETTINGS to go back", True, dark_gray)
+            instructions = small_font.render("Click to mark | EXIT saves+closes | ESC/SETTINGS to go back", True, dark_gray)
             instructions_rect = instructions.get_rect(center=(screen_width // 2, screen_height - 12))
             screen.blit(instructions, instructions_rect)
         
