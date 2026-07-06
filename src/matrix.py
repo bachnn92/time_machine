@@ -119,8 +119,8 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     button_height = 28
     button_width = 100
     row1_count = 4
-    button_gap = 24
-    row_gap = 18
+    button_gap = 16
+    row_gap = 14
     row1_total_width = row1_count * button_width + (row1_count - 1) * button_gap
     row1_x = (screen_width - row1_total_width) // 2
     row1_y = screen_height - 224
@@ -132,13 +132,13 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     row3_x = (screen_width - row3_total_width) // 2
 
     new_button_rect = pygame.Rect(row1_x, row1_y, button_width, button_height)
-    deploy_button_rect = pygame.Rect(row1_x + (button_width + button_gap), row1_y, button_width, button_height)
-    push_button_rect = pygame.Rect(row1_x + (button_width + button_gap) * 2, row1_y, button_width, button_height)
-    archive_button_rect = pygame.Rect(row1_x + (button_width + button_gap) * 3, row1_y, button_width, button_height)
+    template_button_rect = pygame.Rect(row1_x + (button_width + button_gap), row1_y, button_width, button_height)
+    random_button_rect = pygame.Rect(row1_x + (button_width + button_gap) * 2, row1_y, button_width, button_height)
+    default_button_rect = pygame.Rect(row1_x + (button_width + button_gap) * 3, row1_y, button_width, button_height)
 
-    template_button_rect = pygame.Rect(row2_x, row2_y, button_width, button_height)
-    default_button_rect = pygame.Rect(row2_x + button_width + button_gap, row2_y, button_width, button_height)
-    random_button_rect = pygame.Rect(row2_x + (button_width + button_gap) * 2, row2_y, button_width, button_height)
+    deploy_button_rect = pygame.Rect(row2_x, row2_y, button_width, button_height)
+    push_button_rect = pygame.Rect(row2_x + button_width + button_gap, row2_y, button_width, button_height)
+    archive_button_rect = pygame.Rect(row2_x + (button_width + button_gap) * 2, row2_y, button_width, button_height)
 
     settings_button_rect = pygame.Rect(row3_x, row3_y, button_width, button_height)
     exit_button_rect = pygame.Rect(row3_x + button_width + button_gap, row3_y, button_width, button_height)
@@ -604,8 +604,14 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             drag_last_cell = None
                         elif push_button_rect.collidepoint((x, y)):
                             try:
-                                push_workspace_repo()
-                                matrix_status = "Pushed to remote"
+                                matrix_status = "Pushing..."
+                                matrix_status_color = green
+                                # Repaint status box before starting push.
+                                _draw_matrix_status_box()
+                                pygame.display.update(pygame.Rect(screen_width // 2 - 240, screen_height - 86, 480, 38))
+                                pygame.event.pump()
+                                safe_remote_url = push_workspace_repo()
+                                matrix_status = f"Pushed: {safe_remote_url}"[:80]
                                 matrix_status_color = green
                             except Exception as exc:
                                 reason = _extract_push_reject_reason(exc)
@@ -1089,7 +1095,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 settings_hint_rect = settings_hint.get_rect(center=(screen_width // 2, settings_panel_y + settings_panel_height - 12))
                 screen.blit(settings_hint, settings_hint_rect)
 
-            if not settings_panel_open and not template_panel_open:
+            if not settings_panel_open:
                 _draw_matrix_status_box()
             
             instructions = small_font.render("Left drag:+level | Right drag:erase | Scroll on year number to change year", True, tip_green)

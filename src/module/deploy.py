@@ -52,6 +52,17 @@ def _build_authenticated_url(remote_url: str, login: str, token: str) -> str:
     return urlunparse((parsed.scheme, auth_netloc, parsed.path, parsed.params, parsed.query, parsed.fragment))
 
 
+def _sanitize_remote_url(remote_url: str) -> str:
+    """Return a display-safe remote URL with credentials removed."""
+    parsed = urlparse(remote_url)
+    if not parsed.scheme:
+        return remote_url
+    netloc = parsed.netloc
+    if "@" in netloc:
+        netloc = netloc.split("@", 1)[1]
+    return urlunparse((parsed.scheme, netloc, parsed.path, parsed.params, parsed.query, parsed.fragment))
+
+
 def _clean_workspace(repo_path: Path) -> None:
     if repo_path.is_dir():
         shutil.rmtree(repo_path)
@@ -172,7 +183,7 @@ def push_workspace_repo(workspace_root: str | os.PathLike[str] | None = None) ->
         push_command.append("--force")
     push_command.extend(["-u", "origin", "main"])
     _run_git(push_command, cwd=repo_path)
-    return authenticated_url
+    return _sanitize_remote_url(remote_url)
 
 
 def archive_workspace_repo(workspace_root: str | os.PathLike[str] | None = None) -> Path:
