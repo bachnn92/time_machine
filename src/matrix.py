@@ -45,7 +45,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     # Fonts
     font = pygame.font.SysFont('monospace', 16)
     small_font = pygame.font.SysFont('monospace', 12)
-    year_font = pygame.font.SysFont('monospace', 22)
+    year_font = pygame.font.SysFont('monospace', 28)
     
     # State machine
     STATE_SETTINGS = 0
@@ -595,7 +595,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 pygame.display.update(pygame.Rect(screen_width // 2 - 240, screen_height - 86, 480, 38))
                                 pygame.event.pump()
                                 safe_remote_url = push_workspace_repo()
-                                matrix_status = f"Pushed: {safe_remote_url}"[:80]
+                                matrix_status = f"Pushed to {safe_remote_url}"[:80]
                                 matrix_status_color = green
                             except Exception as exc:
                                 reason = _extract_push_reject_reason(exc)
@@ -623,6 +623,12 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             drag_last_cell = None
                         elif archive_button_rect.collidepoint((x, y)):
                             try:
+                                matrix_status = "Archiving..."
+                                matrix_status_color = green
+                                # Repaint status box before starting archive.
+                                _draw_matrix_status_box()
+                                pygame.display.update(pygame.Rect(screen_width // 2 - 240, screen_height - 86, 480, 38))
+                                pygame.event.pump()
                                 archive_path = archive_workspace_repo()
                                 matrix_status = f"Archived to {archive_path.name}"
                                 matrix_status_color = green
@@ -879,7 +885,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             screen.blit(title, title_rect)
 
             year_value = year_font.render(str(year), True, green)
-            year_value_rect = year_value.get_rect(center=(matrix_center_x, 36))
+            year_value_rect = year_value.get_rect(center=(matrix_center_x, 42))
             screen.blit(year_value, year_value_rect)
             year_scroll_rect = year_value_rect.inflate(16, 8)
 
