@@ -444,7 +444,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         state = STATE_MATRIX
                     elif event.key == pygame.K_TAB:
                         active_field = (active_field + 1) % 5 if active_field is not None else 0
-                    elif event.key == pygame.K_RETURN and active_field is not None:
+                    elif event.key == pygame.K_RETURN:
                         try:
                             applied_year = int(year_text)
                             applied_url = url_text.strip()
@@ -722,7 +722,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             matrix_status_color = dark_gray
                         elif event.key == pygame.K_TAB:
                             active_field = (active_field + 1) % 5 if active_field is not None else 0
-                        elif event.key == pygame.K_RETURN and active_field is not None:
+                        elif event.key == pygame.K_RETURN:
                             _apply_settings_panel()
                         elif event.key == pygame.K_BACKSPACE and active_field is not None:
                             _set_active_field_value(_get_active_field_value()[:-1])
@@ -837,7 +837,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             close_rect = close_text.get_rect(center=close_button_rect.center)
             screen.blit(close_text, close_rect)
             
-            instructions = small_font.render("DEFAULT restores year/path and clears push options | Enter to apply", True, tip_green)
+            instructions = small_font.render("Enter to apply | Esc to cancel", True, tip_green)
             instructions_rect = instructions.get_rect(center=(screen_width // 2, screen_height - 12))
             screen.blit(instructions, instructions_rect)
         
@@ -1060,14 +1060,14 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 close_rect = close_text.get_rect(center=close_button_rect.center)
                 screen.blit(close_text, close_rect)
 
-                settings_hint = small_font.render("DEFAULT restores year/path and clears push options | Enter to apply", True, tip_green)
+                settings_hint = small_font.render("Enter to apply | Esc to cancel", True, tip_green)
                 settings_hint_rect = settings_hint.get_rect(center=(screen_width // 2, settings_panel_y + settings_panel_height - 12))
                 screen.blit(settings_hint, settings_hint_rect)
 
             if not settings_panel_open:
                 _draw_matrix_status_box()
             
-            instructions = small_font.render("Left drag:+level | Right drag:erase | Scroll on year number to change year", True, tip_green)
+            instructions = small_font.render("Left click/drag to draw | Right click/drag to erase | Scroll over year to change", True, tip_green)
             instructions_rect = instructions.get_rect(center=(screen_width // 2, screen_height - 12))
             screen.blit(instructions, instructions_rect)
         
