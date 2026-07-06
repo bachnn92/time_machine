@@ -106,7 +106,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     # Matrix state variables
     matrix = None
     marked: dict[tuple[int, int], int] = {}
-    cell_size = 10
+    cell_size = 12
     label_width = 40
     label_height = 20
     button_height = 28
@@ -115,7 +115,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     button_gap = 24
     row1_total_width = row1_count * button_width + (row1_count - 1) * button_gap
     row1_x = (screen_width - row1_total_width) // 2
-    row1_y = screen_height - 156
+    row1_y = screen_height - 184
     row2_y = row1_y + button_height + 18
     row2_total_width = button_width * 3 + button_gap * 2
     row2_x = (screen_width - row2_total_width) // 2
@@ -222,7 +222,6 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             return
         status_box_rect = pygame.Rect(screen_width // 2 - 240, screen_height - 86, 480, 38)
         pygame.draw.rect(screen, black, status_box_rect)
-        pygame.draw.rect(screen, gray, status_box_rect, 1)
         status_surface = small_font.render(matrix_status[:80], True, matrix_status_color)
         status_rect = status_surface.get_rect(midleft=(status_box_rect.x + 10, status_box_rect.centery))
         screen.blit(status_surface, status_rect)
@@ -407,7 +406,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             drag_right_active = False
                             drag_last_cell = None
                         elif deploy_button_rect.collidepoint((x, y)):
-                            matrix_status = "Deploying..."
+                            matrix_status = "Committing..."
                             matrix_status_color = green
                             # Force the status box to repaint before the long deploy task starts.
                             _draw_matrix_status_box()
@@ -415,10 +414,10 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             pygame.event.pump()
                             try:
                                 repo_path, commit_total = deploy_mock_repo(marked, year, applied_file)
-                                matrix_status = f"Deployed {repo_path.name} with {commit_total} commits"
+                                matrix_status = f"Committed {repo_path.name} with {commit_total} commits"
                                 matrix_status_color = green
                             except Exception as exc:
-                                matrix_status = f"Deploy failed: {exc}"
+                                matrix_status = f"Commit failed: {exc}"
                                 matrix_status_color = white
                             drag_left_active = False
                             drag_right_active = False
@@ -682,7 +681,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
 
             deploy_button_color = green if deploy_button_rect.collidepoint(pygame.mouse.get_pos()) else white
             pygame.draw.rect(screen, deploy_button_color, deploy_button_rect, 2)
-            deploy_text = small_font.render("DEPLOY", True, deploy_button_color)
+            deploy_text = small_font.render("COMMIT", True, deploy_button_color)
             deploy_text_rect = deploy_text.get_rect(center=deploy_button_rect.center)
             screen.blit(deploy_text, deploy_text_rect)
 
