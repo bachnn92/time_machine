@@ -13,7 +13,7 @@ Architect:
 Flow:
  - start with cli or ui
  - random or matrix
- - create plan as json
+ - create schema as json
  - apply to create commits
  - option to create repo on git hub
  - option to push

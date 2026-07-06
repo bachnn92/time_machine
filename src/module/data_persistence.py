@@ -12,17 +12,17 @@ def _clamp_level(level: int) -> int:
 
 
 def _get_filepath(filename: str) -> str:
-    """Resolve filepath: if filename contains '/', use as-is; otherwise prefix with 'plan/'."""
+    """Resolve filepath: if filename contains '/', use as-is; otherwise prefix with 'schema/'."""
     if "/" in filename:
         return filename
-    return f"plan/{filename}"
+    return f"schema/{filename}"
 
 
 def load_marked_dates(filename: str = "data.json") -> dict[tuple[int, int], int]:
     """Loads marked dates and levels from JSON file.
     
     Args:
-        filename: Simple filename (stored in plan/) or full path (used as-is)
+        filename: Simple filename (stored in schema/) or full path (used as-is)
     """
     filepath = _get_filepath(filename)
     if not os.path.exists(filepath):
@@ -69,7 +69,7 @@ def save_marked_dates(marked: dict[tuple[int, int], int], year: int, filename: s
     Args:
         marked: Mapping of (week, day) -> level (1..4)
         year: Year for date conversion
-        filename: Simple filename (stored in plan/) or full path (used as-is)
+        filename: Simple filename (stored in schema/) or full path (used as-is)
     """
     dates = []
     for (week, day), level in marked.items():
