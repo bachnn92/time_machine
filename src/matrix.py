@@ -43,7 +43,7 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
     # State machine
     STATE_SETTINGS = 0
     STATE_MATRIX = 1
-    state = STATE_SETTINGS
+    state = STATE_MATRIX
     
     # Settings state variables
     year_text = str(year)
@@ -87,7 +87,12 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
     drag_left_active = False
     drag_right_active = False
     drag_last_cell: tuple[int, int] | None = None
+    year_scroll_rect = pygame.Rect(0, 0, 0, 0)
     
+    # Initialize matrix view immediately on app start.
+    matrix = generate_commit_matrix(year)
+    marked = load_marked_dates(file_text)
+
     clock = pygame.time.Clock()
     running = True
     
@@ -195,6 +200,19 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                         drag_right_active = False
                     if not drag_left_active and not drag_right_active:
                         drag_last_cell = None
+                elif event.type == pygame.MOUSEWHEEL:
+                    if year_scroll_rect.collidepoint(pygame.mouse.get_pos()) and event.y != 0:
+                        save_marked_dates(marked, year, file_text)
+                        if event.y > 0:
+                            year = min(9999, year + 1)
+                        else:
+                            year = max(1, year - 1)
+                        year_text = str(year)
+                        matrix = generate_commit_matrix(year)
+                        marked = load_marked_dates(file_text)
+                        drag_left_active = False
+                        drag_right_active = False
+                        drag_last_cell = None
                 elif event.type == pygame.MOUSEMOTION:
                     if not (drag_left_active or drag_right_active):
                         continue
@@ -285,9 +303,14 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                 screen.blit(text, (grid_x + week * cell_size + 2, matrix_y + 5))
             
             # Title and instructions
-            title = font.render(f"Time Machine - Matrix", True, green)
+            title = font.render("Time Machine - Matrix", True, green)
             title_rect = title.get_rect(center=(screen_width // 2, 15))
             screen.blit(title, title_rect)
+
+            year_value = font.render(str(year), True, green)
+            year_value_rect = year_value.get_rect(center=(screen_width // 2, 36))
+            screen.blit(year_value, year_value_rect)
+            year_scroll_rect = year_value_rect.inflate(16, 8)
 
             # Settings button
             new_button_color = green if new_button_rect.collidepoint(pygame.mouse.get_pos()) else white
@@ -314,7 +337,7 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
             exit_text_rect = exit_text.get_rect(center=exit_button_rect.center)
             screen.blit(exit_text, exit_text_rect)
             
-            instructions = small_font.render("Left drag:+level | Right drag:erase | DEFAULT restores default-data.json", True, dark_gray)
+            instructions = small_font.render("Left drag:+level | Right drag:erase | Scroll on year number to change year", True, dark_gray)
             instructions_rect = instructions.get_rect(center=(screen_width // 2, screen_height - 12))
             screen.blit(instructions, instructions_rect)
         
