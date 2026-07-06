@@ -1,7 +1,10 @@
 
 """Pygame-based UI for the 8-bit commit matrix editor."""
 
-from .module.data_persistence import load_marked_dates, save_marked_dates
+from .module.data_persistence import (
+    load_marked_dates, save_marked_dates,
+    load_git_profile, save_git_profile
+)
 from .module.matrix_logic import generate_commit_matrix
 from .module.visualization import plot_matrix
 
@@ -44,21 +47,44 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
     STATE_SETTINGS = 0
     STATE_MATRIX = 1
     state = STATE_MATRIX
+
+    default_year = 2026
+    default_path = "data.json"
     
     # Settings state variables
-    year_text = str(year)
-    file_text = filename
+    git_profile = load_git_profile()
+    applied_year = git_profile.get("year", year)
+    applied_file = git_profile.get("path", filename)
+    if not isinstance(applied_file, str) or not applied_file.strip():
+        applied_file = filename
+    try:
+        applied_year = int(applied_year)
+    except (TypeError, ValueError):
+        applied_year = year
+    year = applied_year
+    year_text = str(applied_year)
+    file_text = applied_file
+    username_text = git_profile.get("username", "")
+    email_text = git_profile.get("email", "")
+    token_text = git_profile.get("token", "")
     active_field = None
 
     settings_panel_width = 560
-    settings_panel_height = 280
+    settings_panel_height = 400
     settings_panel_x = (screen_width - settings_panel_width) // 2
     settings_panel_y = (screen_height - settings_panel_height) // 2
     label_x = settings_panel_x + 40
     field_x = settings_panel_x + 120
-    year_field_rect = pygame.Rect(field_x, settings_panel_y + 70, 350, 35)
-    file_field_rect = pygame.Rect(field_x, settings_panel_y + 140, 350, 35)
-    start_button_rect = pygame.Rect(settings_panel_x + (settings_panel_width - 200) // 2, settings_panel_y + 210, 200, 50)
+    app_settings_rect = pygame.Rect(settings_panel_x + 20, settings_panel_y + 45, settings_panel_width - 40, 120)
+    profile_rect = pygame.Rect(settings_panel_x + 20, settings_panel_y + 180, settings_panel_width - 40, 155)
+    year_field_rect = pygame.Rect(field_x, settings_panel_y + 78, 350, 30)
+    file_field_rect = pygame.Rect(field_x, settings_panel_y + 118, 350, 30)
+    username_field_rect = pygame.Rect(field_x, settings_panel_y + 213, 350, 30)
+    email_field_rect = pygame.Rect(field_x, settings_panel_y + 253, 350, 30)
+    token_field_rect = pygame.Rect(field_x, settings_panel_y + 293, 350, 30)
+    default_settings_button_rect = pygame.Rect(settings_panel_x + 20, settings_panel_y + 345, 160, 40)
+    apply_button_rect = pygame.Rect(settings_panel_x + 200, settings_panel_y + 345, 160, 40)
+    close_button_rect = pygame.Rect(settings_panel_x + 380, settings_panel_y + 345, 160, 40)
     
     # Matrix state variables
     matrix = None
@@ -91,7 +117,7 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
     
     # Initialize matrix view immediately on app start.
     matrix = generate_commit_matrix(year)
-    marked = load_marked_dates(file_text)
+    marked = load_marked_dates(applied_file)
 
     clock = pygame.time.Clock()
     running = True
@@ -109,27 +135,66 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                             active_field = 0
                         elif file_field_rect.collidepoint(pos):
                             active_field = 1
-                        elif start_button_rect.collidepoint(pos):
+                        elif username_field_rect.collidepoint(pos):
+                            active_field = 2
+                        elif email_field_rect.collidepoint(pos):
+                            active_field = 3
+                        elif token_field_rect.collidepoint(pos):
+                            active_field = 4
+                        elif default_settings_button_rect.collidepoint(pos):
+                            year_text = str(default_year)
+                            file_text = default_path
+                        elif apply_button_rect.collidepoint(pos):
                             try:
-                                year = int(year_text)
+                                applied_year = int(year_text)
+                                applied_file = file_text.strip() if file_text.strip() else default_path
+                                year = applied_year
+                                file_text = applied_file
+                                # Save git profile
+                                save_git_profile(
+                                    username_text,
+                                    email_text,
+                                    token_text,
+                                    year=applied_year,
+                                    path=applied_file,
+                                )
                                 # Generate matrix and load marked dates
-                                matrix = generate_commit_matrix(year)
-                                marked = load_marked_dates(file_text)
+                                matrix = generate_commit_matrix(applied_year)
+                                marked = load_marked_dates(applied_file)
                                 state = STATE_MATRIX
                             except ValueError:
-                                year_text = str(year)
+                                year_text = str(applied_year)
+                        elif close_button_rect.collidepoint(pos):
+                            # Return to matrix and discard unsaved settings edits
+                            year_text = str(applied_year)
+                            file_text = applied_file
+                            git_profile = load_git_profile()
+                            username_text = git_profile.get("username", "")
+                            email_text = git_profile.get("email", "")
+                            token_text = git_profile.get("token", "")
+                            state = STATE_MATRIX
                 
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_TAB:
-                        active_field = 1 - active_field if active_field is not None else 0
+                        active_field = (active_field + 1) % 5 if active_field is not None else 0
                     elif event.key == pygame.K_RETURN and active_field is not None:
                         try:
-                            year = int(year_text)
-                            matrix = generate_commit_matrix(year)
-                            marked = load_marked_dates(file_text)
+                            applied_year = int(year_text)
+                            applied_file = file_text.strip() if file_text.strip() else default_path
+                            year = applied_year
+                            file_text = applied_file
+                            save_git_profile(
+                                username_text,
+                                email_text,
+                                token_text,
+                                year=applied_year,
+                                path=applied_file,
+                            )
+                            matrix = generate_commit_matrix(applied_year)
+                            marked = load_marked_dates(applied_file)
                             state = STATE_MATRIX
                         except ValueError:
-                            year_text = str(year)
+                            year_text = str(applied_year)
                     elif active_field == 0:
                         if event.key == pygame.K_BACKSPACE:
                             year_text = year_text[:-1] if year_text else year_text
@@ -142,6 +207,24 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                         elif event.unicode.isprintable():
                             if len(file_text) < 100:
                                 file_text += event.unicode
+                    elif active_field == 2:
+                        if event.key == pygame.K_BACKSPACE:
+                            username_text = username_text[:-1] if username_text else username_text
+                        elif event.unicode.isprintable():
+                            if len(username_text) < 50:
+                                username_text += event.unicode
+                    elif active_field == 3:
+                        if event.key == pygame.K_BACKSPACE:
+                            email_text = email_text[:-1] if email_text else email_text
+                        elif event.unicode.isprintable():
+                            if len(email_text) < 100:
+                                email_text += event.unicode
+                    elif active_field == 4:
+                        if event.key == pygame.K_BACKSPACE:
+                            token_text = token_text[:-1] if token_text else token_text
+                        elif event.unicode.isprintable():
+                            if len(token_text) < 120:
+                                token_text += event.unicode
             
             elif state == STATE_MATRIX:
                 grid_width = 52 * cell_size
@@ -158,7 +241,7 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                     if event.button == 1:
                         if new_button_rect.collidepoint((x, y)):
                             marked.clear()
-                            save_marked_dates(marked, year, file_text)
+                            save_marked_dates(marked, year, applied_file)
                             drag_left_active = False
                             drag_right_active = False
                             drag_last_cell = None
@@ -168,12 +251,17 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                             drag_right_active = False
                             drag_last_cell = None
                         elif exit_button_rect.collidepoint((x, y)):
-                            save_marked_dates(marked, year, file_text)
+                            save_marked_dates(marked, year, applied_file)
                             running = False
                         elif settings_button_rect.collidepoint((x, y)):
-                            save_marked_dates(marked, year, file_text)
+                            save_marked_dates(marked, year, applied_file)
                             state = STATE_SETTINGS
                             year_text = str(year)
+                            file_text = applied_file
+                            git_profile = load_git_profile()
+                            username_text = git_profile.get("username", "")
+                            email_text = git_profile.get("email", "")
+                            token_text = git_profile.get("token", "")
                             active_field = None
                         elif grid_x <= x < grid_x + grid_width and grid_y <= y < grid_y + grid_height:
                             week = (x - grid_x) // cell_size
@@ -202,14 +290,15 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                         drag_last_cell = None
                 elif event.type == pygame.MOUSEWHEEL:
                     if year_scroll_rect.collidepoint(pygame.mouse.get_pos()) and event.y != 0:
-                        save_marked_dates(marked, year, file_text)
+                        save_marked_dates(marked, year, applied_file)
                         if event.y > 0:
                             year = min(9999, year + 1)
                         else:
                             year = max(1, year - 1)
+                        applied_year = year
                         year_text = str(year)
                         matrix = generate_commit_matrix(year)
-                        marked = load_marked_dates(file_text)
+                        marked = load_marked_dates(applied_file)
                         drag_left_active = False
                         drag_right_active = False
                         drag_last_cell = None
@@ -231,10 +320,14 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         # Save and return to settings
-                        save_marked_dates(marked, year, file_text)
+                        save_marked_dates(marked, year, applied_file)
                         state = STATE_SETTINGS
-                        year_text = str(year)
-                        file_text = filename
+                        year_text = str(applied_year)
+                        file_text = applied_file
+                        git_profile = load_git_profile()
+                        username_text = git_profile.get("username", "")
+                        email_text = git_profile.get("email", "")
+                        token_text = git_profile.get("token", "")
                         active_field = None
                         drag_left_active = False
                         drag_right_active = False
@@ -247,6 +340,14 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
             title = font.render("Time Machine Settings", True, green)
             title_rect = title.get_rect(center=(screen_width // 2, settings_panel_y + 20))
             screen.blit(title, title_rect)
+
+            pygame.draw.rect(screen, gray, app_settings_rect, 1)
+            app_settings_title = small_font.render("App Setting", True, green)
+            screen.blit(app_settings_title, (app_settings_rect.x + 8, app_settings_rect.y + 6))
+
+            pygame.draw.rect(screen, gray, profile_rect, 1)
+            profile_title = small_font.render("Profile", True, green)
+            screen.blit(profile_title, (profile_rect.x + 8, profile_rect.y + 6))
             
             year_label = small_font.render("Year:", True, white)
             screen.blit(year_label, (label_x, year_field_rect.y + 13))
@@ -262,13 +363,50 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
             file_display = small_font.render(file_text[-30:], True, white)
             screen.blit(file_display, (file_field_rect.x + 10, file_field_rect.y + 13))
             
-            button_color = green if start_button_rect.collidepoint(pygame.mouse.get_pos()) else white
-            pygame.draw.rect(screen, button_color, start_button_rect, 2)
-            start_text = font.render("START", True, button_color)
-            start_rect = start_text.get_rect(center=start_button_rect.center)
-            screen.blit(start_text, start_rect)
+            username_label = small_font.render("Username:", True, white)
+            screen.blit(username_label, (label_x - 20, username_field_rect.y + 13))
+            username_field_color = green if active_field == 2 else gray
+            pygame.draw.rect(screen, username_field_color, username_field_rect, 2)
+            username_display = small_font.render(username_text[-30:] if username_text else "", True, white)
+            screen.blit(username_display, (username_field_rect.x + 10, username_field_rect.y + 13))
             
-            instructions = small_font.render("Click/Tab to switch | Enter/Click START to begin", True, dark_gray)
+            email_label = small_font.render("Email:", True, white)
+            screen.blit(email_label, (label_x + 5, email_field_rect.y + 13))
+            email_field_color = green if active_field == 3 else gray
+            pygame.draw.rect(screen, email_field_color, email_field_rect, 2)
+            email_display = small_font.render(email_text[-30:] if email_text else "", True, white)
+            screen.blit(email_display, (email_field_rect.x + 10, email_field_rect.y + 13))
+
+            token_label = small_font.render("Token:", True, white)
+            screen.blit(token_label, (label_x + 8, token_field_rect.y + 10))
+            token_field_color = green if active_field == 4 else gray
+            pygame.draw.rect(screen, token_field_color, token_field_rect, 2)
+            token_masked = "*" * min(len(token_text), 30)
+            token_display = small_font.render(token_masked, True, white)
+            screen.blit(token_display, (token_field_rect.x + 10, token_field_rect.y + 10))
+
+            # DEFAULT button
+            default_settings_button_color = green if default_settings_button_rect.collidepoint(pygame.mouse.get_pos()) else white
+            pygame.draw.rect(screen, default_settings_button_color, default_settings_button_rect, 2)
+            default_settings_text = small_font.render("DEFAULT", True, default_settings_button_color)
+            default_settings_rect = default_settings_text.get_rect(center=default_settings_button_rect.center)
+            screen.blit(default_settings_text, default_settings_rect)
+            
+            # APPLY button
+            apply_button_color = green if apply_button_rect.collidepoint(pygame.mouse.get_pos()) else white
+            pygame.draw.rect(screen, apply_button_color, apply_button_rect, 2)
+            apply_text = small_font.render("APPLY", True, apply_button_color)
+            apply_rect = apply_text.get_rect(center=apply_button_rect.center)
+            screen.blit(apply_text, apply_rect)
+            
+            # CLOSE button
+            close_button_color = green if close_button_rect.collidepoint(pygame.mouse.get_pos()) else white
+            pygame.draw.rect(screen, close_button_color, close_button_rect, 2)
+            close_text = small_font.render("CLOSE", True, close_button_color)
+            close_rect = close_text.get_rect(center=close_button_rect.center)
+            screen.blit(close_text, close_rect)
+            
+            instructions = small_font.render("DEFAULT restores year/path | Enter to apply", True, dark_gray)
             instructions_rect = instructions.get_rect(center=(screen_width // 2, screen_height - 12))
             screen.blit(instructions, instructions_rect)
         
@@ -346,7 +484,7 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
     
     # Save on exit
     if state == STATE_MATRIX and matrix is not None:
-        save_marked_dates(marked, year, file_text)
+        save_marked_dates(marked, year, applied_file)
     
     pygame.quit()
 
