@@ -189,6 +189,39 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             git_profile_defaults.get("token", ""),
         )
 
+    def _extract_push_reject_reason(exc: Exception) -> str:
+        """Return the most useful one-line reason from a git push failure."""
+        raw = str(exc)
+        lines = [line.strip() for line in raw.splitlines() if line.strip()]
+        if not lines:
+            return "unknown reason"
+
+        keywords = (
+            "rejected",
+            "non-fast-forward",
+            "denied",
+            "failed to push",
+            "fetch first",
+            "updates were rejected",
+            "error",
+            "fatal",
+        )
+        for line in lines:
+            lower = line.lower()
+            if any(keyword in lower for keyword in keywords):
+                return line
+        return lines[0]
+
+    def _draw_matrix_status_box() -> None:
+        if not matrix_status:
+            return
+        status_box_rect = pygame.Rect(screen_width // 2 - 240, screen_height - 86, 480, 38)
+        pygame.draw.rect(screen, black, status_box_rect)
+        pygame.draw.rect(screen, gray, status_box_rect, 1)
+        status_surface = small_font.render(matrix_status[:80], True, matrix_status_color)
+        status_rect = status_surface.get_rect(midleft=(status_box_rect.x + 10, status_box_rect.centery))
+        screen.blit(status_surface, status_rect)
+
     clock = pygame.time.Clock()
     running = True
     
@@ -365,16 +398,23 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             drag_last_cell = None
                         elif push_button_rect.collidepoint((x, y)):
                             try:
-                                pushed_url = push_workspace_repo()
-                                matrix_status = f"Pushed to {pushed_url}"
+                                push_workspace_repo()
+                                matrix_status = "Pushed to remote"
                                 matrix_status_color = green
                             except Exception as exc:
-                                matrix_status = f"Push failed: {exc}"
+                                reason = _extract_push_reject_reason(exc)
+                                matrix_status = f"Push failed: {reason}"
                                 matrix_status_color = white
                             drag_left_active = False
                             drag_right_active = False
                             drag_last_cell = None
                         elif deploy_button_rect.collidepoint((x, y)):
+                            matrix_status = "Deploying..."
+                            matrix_status_color = green
+                            # Force the status box to repaint before the long deploy task starts.
+                            _draw_matrix_status_box()
+                            pygame.display.update(pygame.Rect(screen_width // 2 - 240, screen_height - 86, 480, 38))
+                            pygame.event.pump()
                             try:
                                 repo_path, commit_total = deploy_mock_repo(marked, year, applied_file)
                                 matrix_status = f"Deployed {repo_path.name} with {commit_total} commits"
@@ -685,13 +725,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             exit_text_rect = exit_text.get_rect(center=exit_button_rect.center)
             screen.blit(exit_text, exit_text_rect)
 
-            if matrix_status:
-                status_box_rect = pygame.Rect(screen_width // 2 - 240, screen_height - 86, 480, 38)
-                pygame.draw.rect(screen, black, status_box_rect)
-                pygame.draw.rect(screen, gray, status_box_rect, 1)
-                status_surface = small_font.render(matrix_status[:80], True, matrix_status_color)
-                status_rect = status_surface.get_rect(midleft=(status_box_rect.x + 10, status_box_rect.centery))
-                screen.blit(status_surface, status_rect)
+            _draw_matrix_status_box()
             
             instructions = small_font.render("Left drag:+level | Right drag:erase | Scroll on year number to change year", True, dark_gray)
             instructions_rect = instructions.get_rect(center=(screen_width // 2, screen_height - 12))
