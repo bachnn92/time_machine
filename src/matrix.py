@@ -29,7 +29,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     pygame.key.set_repeat(350, 40)
     
     # Screen setup
-    screen_width, screen_height = 760, 420
+    screen_width, screen_height = 920, 580
     screen = pygame.display.set_mode((screen_width, screen_height))
     pygame.display.set_caption("Time Machine")
     
@@ -79,27 +79,29 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     token_text = git_profile.get("token", "")
     active_field = None
 
-    settings_panel_width = min(700, screen_width - 40)
-    settings_panel_height = min(370, screen_height - 24)
+    settings_panel_width = min(860, screen_width - 40)
+    settings_panel_height = min(520, screen_height - 30)
     settings_panel_x = (screen_width - settings_panel_width) // 2
     settings_panel_y = (screen_height - settings_panel_height) // 2
-    label_x = settings_panel_x + 40
-    field_x = settings_panel_x + 120
-    field_width = settings_panel_width - 180
-    visible_text_chars = max(40, (field_width - 30) // 8)
+    label_x = settings_panel_x + 28
+    field_x = settings_panel_x + 150
+    field_width = settings_panel_width - 230
+    visible_text_chars = max(36, (field_width - 30) // 8)
     profile_rect = pygame.Rect(settings_panel_x + 20, settings_panel_y + 45, settings_panel_width - 40, 175)
-    app_settings_rect = pygame.Rect(settings_panel_x + 20, settings_panel_y + 225, settings_panel_width - 40, 95)
+    app_settings_rect = pygame.Rect(settings_panel_x + 20, settings_panel_y + 237, settings_panel_width - 40, 163)
     user_field_rect = pygame.Rect(field_x, settings_panel_y + 78, field_width, 30)
     email_field_rect = pygame.Rect(field_x, settings_panel_y + 112, field_width, 30)
     url_field_rect = pygame.Rect(field_x, settings_panel_y + 146, field_width, 30)
     token_field_rect = pygame.Rect(field_x, settings_panel_y + 180, field_width, 30)
-    year_field_rect = pygame.Rect(field_x, settings_panel_y + 244, field_width, 30)
-    file_field_rect = pygame.Rect(field_x, settings_panel_y + 278, field_width, 30)
-    force_push_rect = pygame.Rect(field_x, settings_panel_y + 310, 24, 24)
-    debug_rect = pygame.Rect(field_x + 188, settings_panel_y + 310, 24, 24)
-    default_settings_button_rect = pygame.Rect(settings_panel_x + 20, settings_panel_y + settings_panel_height - 44, 160, 32)
-    apply_button_rect = pygame.Rect(settings_panel_x + 200, settings_panel_y + settings_panel_height - 44, 160, 32)
-    close_button_rect = pygame.Rect(settings_panel_x + 380, settings_panel_y + settings_panel_height - 44, 160, 32)
+    year_field_rect = pygame.Rect(field_x, settings_panel_y + 258, field_width, 30)
+    file_field_rect = pygame.Rect(field_x, settings_panel_y + 292, field_width, 30)
+    force_push_rect = pygame.Rect(field_x, settings_panel_y + 326, 24, 24)
+    debug_rect = pygame.Rect(field_x, settings_panel_y + 360, 24, 24)
+    settings_button_row_width = 160 * 3 + 20 * 2
+    settings_button_row_x = settings_panel_x + settings_panel_width - 20 - settings_button_row_width
+    default_settings_button_rect = pygame.Rect(settings_button_row_x, settings_panel_y + settings_panel_height - 44, 160, 32)
+    apply_button_rect = pygame.Rect(settings_button_row_x + 180, settings_panel_y + settings_panel_height - 44, 160, 32)
+    close_button_rect = pygame.Rect(settings_button_row_x + 360, settings_panel_y + settings_panel_height - 44, 160, 32)
     
     # Matrix state variables
     matrix = None
@@ -110,7 +112,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     button_width = 120
     button_height = 28
     button_gap = 8
-    button_x = screen_width - button_width - 12
+    button_x = 12
     bottom_margin = 46
     new_button_y = screen_height - (button_height * 8 + button_gap * 7 + bottom_margin)
     new_button_rect = pygame.Rect(button_x, new_button_y, button_width, button_height)
@@ -490,7 +492,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         if state == STATE_SETTINGS:
             # Draw settings screen
             title = font.render("Time Machine Settings", True, green)
-            title_rect = title.get_rect(center=(screen_width // 2, settings_panel_y + 20))
+            title_rect = title.get_rect(center=(screen_width // 2, 15))
             screen.blit(title, title_rect)
 
             pygame.draw.rect(screen, gray, app_settings_rect, 1)
@@ -539,7 +541,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             screen.blit(file_display, (file_field_rect.x + 10, file_field_rect.y + 13))
 
             force_label = small_font.render("Force Push:", True, white)
-            screen.blit(force_label, (label_x - 18, force_push_rect.y + 8))
+            screen.blit(force_label, (label_x, force_push_rect.y + 8))
             pygame.draw.rect(screen, green if force_push_enabled else gray, force_push_rect, 2)
             if force_push_enabled:
                 force_mark = small_font.render("X", True, green)
@@ -547,7 +549,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 screen.blit(force_mark, force_mark_rect)
 
             debug_label = small_font.render("Debug:", True, white)
-            screen.blit(debug_label, (debug_rect.x + 32, debug_rect.y + 8))
+            screen.blit(debug_label, (label_x, debug_rect.y + 8))
             pygame.draw.rect(screen, green if debug_enabled else gray, debug_rect, 2)
             if debug_enabled:
                 debug_mark = small_font.render("X", True, green)
@@ -575,10 +577,10 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             apply_rect = apply_text.get_rect(center=apply_button_rect.center)
             screen.blit(apply_text, apply_rect)
             
-            # CLOSE button
+            # CANCEL button
             close_button_color = green if close_button_rect.collidepoint(pygame.mouse.get_pos()) else white
             pygame.draw.rect(screen, close_button_color, close_button_rect, 2)
-            close_text = small_font.render("CLOSE", True, close_button_color)
+            close_text = small_font.render("CANCEL", True, close_button_color)
             close_rect = close_text.get_rect(center=close_button_rect.center)
             screen.blit(close_text, close_rect)
             
