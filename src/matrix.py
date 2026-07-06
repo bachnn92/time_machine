@@ -37,6 +37,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     black = (0, 0, 0)
     white = (255, 255, 255)
     green = (0, 255, 0)
+    tip_green = (70, 200, 90)
     gray = (100, 100, 100)
     dark_gray = (50, 50, 50)
     cell_border = (35, 35, 35)
@@ -88,6 +89,8 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     label_x = settings_panel_x + 28
     field_x = settings_panel_x + 150
     field_width = settings_panel_width - 230
+    settings_button_width = 100
+    settings_button_height = 28
     visible_text_chars = max(36, (field_width - 30) // 8)
     profile_rect = pygame.Rect(settings_panel_x + 20, settings_panel_y + 45, settings_panel_width - 40, 175)
     app_settings_rect = pygame.Rect(settings_panel_x + 20, settings_panel_y + 237, settings_panel_width - 40, 197)
@@ -100,11 +103,12 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     force_push_rect = pygame.Rect(field_x, settings_panel_y + 326, 24, 24)
     debug_rect = pygame.Rect(field_x, settings_panel_y + 360, 24, 24)
     random_rect = pygame.Rect(field_x, settings_panel_y + 394, 24, 24)
-    settings_button_row_width = 160 * 3 + 20 * 2
+    settings_button_row_width = settings_button_width * 3 + 20 * 2
     settings_button_row_x = settings_panel_x + settings_panel_width - 20 - settings_button_row_width
-    default_settings_button_rect = pygame.Rect(settings_button_row_x, settings_panel_y + settings_panel_height - 44, 160, 32)
-    apply_button_rect = pygame.Rect(settings_button_row_x + 180, settings_panel_y + settings_panel_height - 44, 160, 32)
-    close_button_rect = pygame.Rect(settings_button_row_x + 360, settings_panel_y + settings_panel_height - 44, 160, 32)
+    settings_button_row_y = settings_panel_y + settings_panel_height - 64
+    default_settings_button_rect = pygame.Rect(settings_button_row_x, settings_button_row_y, settings_button_width, settings_button_height)
+    apply_button_rect = pygame.Rect(settings_button_row_x + settings_button_width + 20, settings_button_row_y, settings_button_width, settings_button_height)
+    close_button_rect = pygame.Rect(settings_button_row_x + (settings_button_width + 20) * 2, settings_button_row_y, settings_button_width, settings_button_height)
     
     # Matrix state variables
     matrix = None
@@ -851,7 +855,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             close_rect = close_text.get_rect(center=close_button_rect.center)
             screen.blit(close_text, close_rect)
             
-            instructions = small_font.render("DEFAULT restores year/path and clears push options | Enter to apply", True, dark_gray)
+            instructions = small_font.render("DEFAULT restores year/path and clears push options | Enter to apply", True, tip_green)
             instructions_rect = instructions.get_rect(center=(screen_width // 2, screen_height - 12))
             screen.blit(instructions, instructions_rect)
         
@@ -977,7 +981,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                     save_text_rect = save_text.get_rect(center=template_save_rects[i].center)
                     screen.blit(save_text, save_text_rect)
 
-                panel_hint = small_font.render("Save or load the current matrix using 5 template slots", True, dark_gray)
+                panel_hint = small_font.render("Save or load the current matrix using 5 template slots", True, tip_green)
                 screen.blit(panel_hint, (template_panel_rect.x + 24, template_panel_rect.bottom - 26))
 
             if settings_panel_open:
@@ -1081,26 +1085,14 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 close_rect = close_text.get_rect(center=close_button_rect.center)
                 screen.blit(close_text, close_rect)
 
-                settings_hint = small_font.render("DEFAULT restores year/path and clears push options | Enter to apply", True, dark_gray)
+                settings_hint = small_font.render("DEFAULT restores year/path and clears push options | Enter to apply", True, tip_green)
                 settings_hint_rect = settings_hint.get_rect(center=(screen_width // 2, settings_panel_y + settings_panel_height - 12))
                 screen.blit(settings_hint, settings_hint_rect)
 
-            # Arrow separators between horizontal button groups.
-            arrow_color = gray
-            row1_buttons = [
-                new_button_rect,
-                deploy_button_rect,
-                push_button_rect,
-                archive_button_rect,
-            ]
-            for left_rect, right_rect in zip(row1_buttons, row1_buttons[1:]):
-                arrow_text = small_font.render("->", True, arrow_color)
-                arrow_rect = arrow_text.get_rect(center=((left_rect.right + right_rect.left) // 2, left_rect.centery))
-                screen.blit(arrow_text, arrow_rect)
-
-            _draw_matrix_status_box()
+            if not settings_panel_open and not template_panel_open:
+                _draw_matrix_status_box()
             
-            instructions = small_font.render("Left drag:+level | Right drag:erase | Scroll on year number to change year", True, dark_gray)
+            instructions = small_font.render("Left drag:+level | Right drag:erase | Scroll on year number to change year", True, tip_green)
             instructions_rect = instructions.get_rect(center=(screen_width // 2, screen_height - 12))
             screen.blit(instructions, instructions_rect)
         
