@@ -12,5 +12,6 @@ wheels/
 /workspace/
 /schema/*
 !/schema/default-data.json
+!/schema/template*.json
 
 *.zip

@@ -120,7 +120,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     row1_x = (screen_width - row1_total_width) // 2
     row1_y = screen_height - 184
     row2_y = row1_y + button_height + 18
-    row2_total_width = button_width * 3 + button_gap * 2
+    row2_total_width = button_width * 4 + button_gap * 3
     row2_x = (screen_width - row2_total_width) // 2
 
     new_button_rect = pygame.Rect(row1_x, row1_y, button_width, button_height)
@@ -131,7 +131,24 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
 
     default_button_rect = pygame.Rect(row2_x, row2_y, button_width, button_height)
     settings_button_rect = pygame.Rect(row2_x + button_width + button_gap, row2_y, button_width, button_height)
-    exit_button_rect = pygame.Rect(row2_x + (button_width + button_gap) * 2, row2_y, button_width, button_height)
+    template_button_rect = pygame.Rect(row2_x + (button_width + button_gap) * 2, row2_y, button_width, button_height)
+    exit_button_rect = pygame.Rect(row2_x + (button_width + button_gap) * 3, row2_y, button_width, button_height)
+
+    template_panel_open = False
+    template_panel_rect = pygame.Rect(screen_width // 2 - 230, screen_height // 2 - 150, 460, 300)
+    template_close_rect = pygame.Rect(template_panel_rect.right - 110, template_panel_rect.y + 16, 86, 30)
+    template_load_rects = [
+        pygame.Rect(template_panel_x + 240, template_panel_y + 58 + i * 42, 86, 30)
+        for i, (template_panel_x, template_panel_y) in enumerate(
+            [(template_panel_rect.x, template_panel_rect.y)] * 5
+        )
+    ]
+    template_save_rects = [
+        pygame.Rect(template_panel_x + 338, template_panel_y + 58 + i * 42, 86, 30)
+        for i, (template_panel_x, template_panel_y) in enumerate(
+            [(template_panel_rect.x, template_panel_rect.y)] * 5
+        )
+    ]
     level_colors = [
         (20, 20, 20),
         (0, 70, 0),
@@ -399,6 +416,29 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     x, y = event.pos
                     if event.button == 1:
+                        if template_panel_open:
+                            if template_close_rect.collidepoint((x, y)):
+                                template_panel_open = False
+                                matrix_status = "Template panel closed"
+                                matrix_status_color = dark_gray
+                            else:
+                                for i in range(5):
+                                    template_filename = f"template-{i + 1}.json"
+                                    if template_load_rects[i].collidepoint((x, y)):
+                                        marked = load_marked_dates(template_filename)
+                                        matrix_status = f"Loaded {template_filename}"
+                                        matrix_status_color = green
+                                        break
+                                    if template_save_rects[i].collidepoint((x, y)):
+                                        save_marked_dates(marked, year, template_filename)
+                                        matrix_status = f"Saved {template_filename}"
+                                        matrix_status_color = green
+                                        break
+                            drag_left_active = False
+                            drag_right_active = False
+                            drag_last_cell = None
+                            continue
+
                         if new_button_rect.collidepoint((x, y)):
                             marked.clear()
                             save_marked_dates(marked, year, applied_file)
@@ -490,6 +530,13 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             debug_enabled = bool(git_profile.get("debug", False))
                             random_enabled = bool(git_profile.get("random", False))
                             active_field = None
+                        elif template_button_rect.collidepoint((x, y)):
+                            template_panel_open = True
+                            matrix_status = "Template panel opened"
+                            matrix_status_color = green
+                            drag_left_active = False
+                            drag_right_active = False
+                            drag_last_cell = None
                         elif grid_x <= x < grid_x + grid_width and grid_y <= y < grid_y + grid_height:
                             week = (x - grid_x) // cell_size
                             day = (y - grid_y) // cell_size
@@ -500,6 +547,8 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 drag_left_active = True
                                 drag_last_cell = pos
                     elif event.button == 3:
+                        if template_panel_open:
+                            continue
                         if grid_x <= x < grid_x + grid_width and grid_y <= y < grid_y + grid_height:
                             week = (x - grid_x) // cell_size
                             day = (y - grid_y) // cell_size
@@ -530,6 +579,8 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         drag_right_active = False
                         drag_last_cell = None
                 elif event.type == pygame.MOUSEMOTION:
+                    if template_panel_open:
+                        continue
                     if not (drag_left_active or drag_right_active):
                         continue
                     x, y = event.pos
@@ -546,6 +597,11 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 drag_last_cell = pos
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
+                        if template_panel_open:
+                            template_panel_open = False
+                            matrix_status = "Template panel closed"
+                            matrix_status_color = dark_gray
+                            continue
                         # Save and return to settings
                         save_marked_dates(marked, year, applied_file)
                         state = STATE_SETTINGS
@@ -754,11 +810,48 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             settings_text_rect = settings_text.get_rect(center=settings_button_rect.center)
             screen.blit(settings_text, settings_text_rect)
 
+            template_button_color = green if template_button_rect.collidepoint(pygame.mouse.get_pos()) else white
+            pygame.draw.rect(screen, template_button_color, template_button_rect, 2)
+            template_text = small_font.render("TEMPLATE", True, template_button_color)
+            template_text_rect = template_text.get_rect(center=template_button_rect.center)
+            screen.blit(template_text, template_text_rect)
+
             exit_button_color = green if exit_button_rect.collidepoint(pygame.mouse.get_pos()) else white
             pygame.draw.rect(screen, exit_button_color, exit_button_rect, 2)
             exit_text = small_font.render("EXIT", True, exit_button_color)
             exit_text_rect = exit_text.get_rect(center=exit_button_rect.center)
             screen.blit(exit_text, exit_text_rect)
+
+            if template_panel_open:
+                pygame.draw.rect(screen, (15, 15, 15), template_panel_rect)
+                pygame.draw.rect(screen, gray, template_panel_rect, 2)
+                panel_title = font.render("Templates", True, green)
+                screen.blit(panel_title, (template_panel_rect.x + 18, template_panel_rect.y + 20))
+
+                close_color = green if template_close_rect.collidepoint(pygame.mouse.get_pos()) else white
+                pygame.draw.rect(screen, close_color, template_close_rect, 2)
+                close_text = small_font.render("CLOSE", True, close_color)
+                close_text_rect = close_text.get_rect(center=template_close_rect.center)
+                screen.blit(close_text, close_text_rect)
+
+                for i in range(5):
+                    slot_label = small_font.render(f"Template {i + 1}", True, white)
+                    screen.blit(slot_label, (template_panel_rect.x + 24, template_panel_rect.y + 68 + i * 42))
+
+                    load_color = green if template_load_rects[i].collidepoint(pygame.mouse.get_pos()) else white
+                    pygame.draw.rect(screen, load_color, template_load_rects[i], 2)
+                    load_text = small_font.render("LOAD", True, load_color)
+                    load_text_rect = load_text.get_rect(center=template_load_rects[i].center)
+                    screen.blit(load_text, load_text_rect)
+
+                    save_color = green if template_save_rects[i].collidepoint(pygame.mouse.get_pos()) else white
+                    pygame.draw.rect(screen, save_color, template_save_rects[i], 2)
+                    save_text = small_font.render("SAVE", True, save_color)
+                    save_text_rect = save_text.get_rect(center=template_save_rects[i].center)
+                    screen.blit(save_text, save_text_rect)
+
+                panel_hint = small_font.render("Save or load the current matrix using 5 template slots", True, dark_gray)
+                screen.blit(panel_hint, (template_panel_rect.x + 24, template_panel_rect.bottom - 26))
 
             # Arrow separators between horizontal button groups.
             arrow_color = gray
