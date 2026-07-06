@@ -6,7 +6,7 @@ from .module.data_persistence import (
     load_git_config_profile, load_git_profile, save_git_profile
 )
 from .module.deploy import archive_workspace_repo, deploy_mock_repo, push_workspace_repo
-from .module.matrix_logic import generate_commit_matrix
+from .module.matrix_logic import generate_commit_matrix, generate_random_marked_dates
 from .module.visualization import plot_matrix
 
 
@@ -60,6 +60,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     applied_url = git_profile.get("url", "")
     applied_force_push = bool(git_profile.get("force_push", False))
     applied_debug = bool(git_profile.get("debug", False))
+    applied_random = bool(git_profile.get("random", False))
     if not isinstance(applied_file, str) or not applied_file.strip():
         applied_file = filename
     if not isinstance(applied_url, str):
@@ -74,6 +75,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     url_text = applied_url
     force_push_enabled = applied_force_push
     debug_enabled = applied_debug
+    random_enabled = applied_random
     user_text = git_profile.get("user", git_profile.get("username", ""))
     email_text = git_profile.get("email", "")
     token_text = git_profile.get("token", "")
@@ -88,7 +90,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     field_width = settings_panel_width - 230
     visible_text_chars = max(36, (field_width - 30) // 8)
     profile_rect = pygame.Rect(settings_panel_x + 20, settings_panel_y + 45, settings_panel_width - 40, 175)
-    app_settings_rect = pygame.Rect(settings_panel_x + 20, settings_panel_y + 237, settings_panel_width - 40, 163)
+    app_settings_rect = pygame.Rect(settings_panel_x + 20, settings_panel_y + 237, settings_panel_width - 40, 197)
     user_field_rect = pygame.Rect(field_x, settings_panel_y + 78, field_width, 30)
     email_field_rect = pygame.Rect(field_x, settings_panel_y + 112, field_width, 30)
     url_field_rect = pygame.Rect(field_x, settings_panel_y + 146, field_width, 30)
@@ -97,6 +99,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     file_field_rect = pygame.Rect(field_x, settings_panel_y + 292, field_width, 30)
     force_push_rect = pygame.Rect(field_x, settings_panel_y + 326, 24, 24)
     debug_rect = pygame.Rect(field_x, settings_panel_y + 360, 24, 24)
+    random_rect = pygame.Rect(field_x, settings_panel_y + 394, 24, 24)
     settings_button_row_width = 160 * 3 + 20 * 2
     settings_button_row_x = settings_panel_x + settings_panel_width - 20 - settings_button_row_width
     default_settings_button_rect = pygame.Rect(settings_button_row_x, settings_panel_y + settings_panel_height - 44, 160, 32)
@@ -111,7 +114,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     label_height = 20
     button_height = 28
     button_width = 100
-    row1_count = 4
+    row1_count = 5
     button_gap = 24
     row1_total_width = row1_count * button_width + (row1_count - 1) * button_gap
     row1_x = (screen_width - row1_total_width) // 2
@@ -121,9 +124,10 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     row2_x = (screen_width - row2_total_width) // 2
 
     new_button_rect = pygame.Rect(row1_x, row1_y, button_width, button_height)
-    deploy_button_rect = pygame.Rect(row1_x + (button_width + button_gap), row1_y, button_width, button_height)
-    push_button_rect = pygame.Rect(row1_x + (button_width + button_gap) * 2, row1_y, button_width, button_height)
-    archive_button_rect = pygame.Rect(row1_x + (button_width + button_gap) * 3, row1_y, button_width, button_height)
+    random_button_rect = pygame.Rect(row1_x + (button_width + button_gap), row1_y, button_width, button_height)
+    deploy_button_rect = pygame.Rect(row1_x + (button_width + button_gap) * 2, row1_y, button_width, button_height)
+    push_button_rect = pygame.Rect(row1_x + (button_width + button_gap) * 3, row1_y, button_width, button_height)
+    archive_button_rect = pygame.Rect(row1_x + (button_width + button_gap) * 4, row1_y, button_width, button_height)
 
     default_button_rect = pygame.Rect(row2_x, row2_y, button_width, button_height)
     settings_button_rect = pygame.Rect(row2_x + button_width + button_gap, row2_y, button_width, button_height)
@@ -249,6 +253,9 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         elif debug_rect.collidepoint(pos):
                             debug_enabled = not debug_enabled
                             active_field = None
+                        elif random_rect.collidepoint(pos):
+                            random_enabled = not random_enabled
+                            active_field = None
                         elif url_field_rect.collidepoint(pos):
                             active_field = 2
                         elif user_field_rect.collidepoint(pos):
@@ -271,6 +278,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             file_text = default_path
                             force_push_enabled = False
                             debug_enabled = False
+                            random_enabled = False
                         elif apply_button_rect.collidepoint(pos):
                             try:
                                 applied_year = int(year_text)
@@ -278,6 +286,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 applied_url = url_text.strip()
                                 applied_force_push = force_push_enabled
                                 applied_debug = debug_enabled
+                                applied_random = random_enabled
                                 year = applied_year
                                 file_text = applied_file
                                 # Save git profile
@@ -290,6 +299,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                     url=url_text,
                                     force_push=force_push_enabled,
                                     debug=debug_enabled,
+                                    random=random_enabled,
                                 )
                                 # Generate matrix and load marked dates
                                 matrix = generate_commit_matrix(applied_year)
@@ -309,6 +319,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             url_text = git_profile.get("url", "")
                             force_push_enabled = bool(git_profile.get("force_push", False))
                             debug_enabled = bool(git_profile.get("debug", False))
+                            random_enabled = bool(git_profile.get("random", False))
                             user_text = git_profile.get("user", git_profile.get("username", ""))
                             email_text = git_profile.get("email", "")
                             token_text = git_profile.get("token", "")
@@ -327,6 +338,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         url_text = git_profile.get("url", "")
                         force_push_enabled = bool(git_profile.get("force_push", False))
                         debug_enabled = bool(git_profile.get("debug", False))
+                        random_enabled = bool(git_profile.get("random", False))
                         user_text = git_profile.get("user", git_profile.get("username", ""))
                         email_text = git_profile.get("email", "")
                         token_text = git_profile.get("token", "")
@@ -344,6 +356,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             applied_url = url_text.strip()
                             applied_force_push = force_push_enabled
                             applied_debug = debug_enabled
+                            applied_random = random_enabled
                             year = applied_year
                             file_text = applied_file
                             save_git_profile(
@@ -355,6 +368,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 url=url_text,
                                 force_push=force_push_enabled,
                                 debug=debug_enabled,
+                                random=random_enabled,
                             )
                             matrix = generate_commit_matrix(applied_year)
                             marked = load_marked_dates(applied_file)
@@ -390,6 +404,22 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             save_marked_dates(marked, year, applied_file)
                             matrix_status = "New matrix created"
                             matrix_status_color = green
+                            drag_left_active = False
+                            drag_right_active = False
+                            drag_last_cell = None
+                        elif random_button_rect.collidepoint((x, y)):
+                            if not random_enabled:
+                                matrix_status = "Random mode is off"
+                                matrix_status_color = white
+                            else:
+                                try:
+                                    marked = generate_random_marked_dates(applied_year)
+                                    save_marked_dates(marked, applied_year, applied_file)
+                                    matrix_status = f"Random commits generated for {applied_year}"
+                                    matrix_status_color = green
+                                except Exception as exc:
+                                    matrix_status = f"Random failed: {exc}"
+                                    matrix_status_color = white
                             drag_left_active = False
                             drag_right_active = False
                             drag_last_cell = None
@@ -458,6 +488,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             email_text = git_profile.get("email", "")
                             token_text = git_profile.get("token", "")
                             debug_enabled = bool(git_profile.get("debug", False))
+                            random_enabled = bool(git_profile.get("random", False))
                             active_field = None
                         elif grid_x <= x < grid_x + grid_width and grid_y <= y < grid_y + grid_height:
                             week = (x - grid_x) // cell_size
@@ -601,6 +632,14 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 debug_mark_rect = debug_mark.get_rect(center=debug_rect.center)
                 screen.blit(debug_mark, debug_mark_rect)
 
+            random_label = small_font.render("Random:", True, white)
+            screen.blit(random_label, (label_x, random_rect.y + 8))
+            pygame.draw.rect(screen, green if random_enabled else gray, random_rect, 2)
+            if random_enabled:
+                random_mark = small_font.render("X", True, green)
+                random_mark_rect = random_mark.get_rect(center=random_rect.center)
+                screen.blit(random_mark, random_mark_rect)
+
             url_label = small_font.render("URL:", True, white)
             screen.blit(url_label, (profile_label_x, url_field_rect.y + 13))
             url_field_color = green if active_field == 2 else gray
@@ -679,6 +718,12 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             new_text_rect = new_text.get_rect(center=new_button_rect.center)
             screen.blit(new_text, new_text_rect)
 
+            random_button_color = green if random_button_rect.collidepoint(pygame.mouse.get_pos()) else white
+            pygame.draw.rect(screen, random_button_color, random_button_rect, 2)
+            random_text = small_font.render("RANDOM", True, random_button_color)
+            random_text_rect = random_text.get_rect(center=random_button_rect.center)
+            screen.blit(random_text, random_text_rect)
+
             deploy_button_color = green if deploy_button_rect.collidepoint(pygame.mouse.get_pos()) else white
             pygame.draw.rect(screen, deploy_button_color, deploy_button_rect, 2)
             deploy_text = small_font.render("COMMIT", True, deploy_button_color)
@@ -719,6 +764,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             arrow_color = gray
             row1_buttons = [
                 new_button_rect,
+                random_button_rect,
                 deploy_button_rect,
                 push_button_rect,
                 archive_button_rect,

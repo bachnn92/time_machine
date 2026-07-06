@@ -53,6 +53,7 @@ def _default_git_profile() -> dict:
         "url": "",
         "force_push": False,
         "debug": False,
+        "random": False,
     }
 
 
@@ -170,6 +171,7 @@ def load_git_profile(filename: str = "configs.json") -> dict:
         url_value = profile_data.get("url", settings_data.get("url", ""))
         force_push_value = settings_data.get("force_push", False)
         debug_value = settings_data.get("debug", False)
+        random_value = settings_data.get("random", False)
         try:
             year_value = int(year_value)
         except (TypeError, ValueError):
@@ -189,6 +191,7 @@ def load_git_profile(filename: str = "configs.json") -> dict:
             "url": url_value.strip() if isinstance(url_value, str) else defaults["url"],
             "force_push": bool(force_push_value),
             "debug": bool(debug_value),
+            "random": bool(random_value),
         }
     except:
         return defaults
@@ -203,6 +206,7 @@ def save_git_profile(
     url: str = "",
     force_push: bool = False,
     debug: bool = False,
+    random: bool = False,
     filename: str = "configs.json",
 ) -> None:
     """Saves git profile and app settings to JSON file.
@@ -227,6 +231,7 @@ def save_git_profile(
             "path": path.strip() if isinstance(path, str) and path.strip() else "data.json",
             "force_push": bool(force_push),
             "debug": bool(debug),
+            "random": bool(random),
         },
     }
     

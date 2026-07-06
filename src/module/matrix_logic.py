@@ -36,3 +36,29 @@ def generate_commit_matrix(year: int) -> list[list[int]]:
         matrix[day_of_week][week] += commits
     
     return matrix
+
+
+def generate_random_marked_dates(
+    year: int,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
+) -> dict[tuple[int, int], int]:
+    """Generate random marked dates across an inclusive date range."""
+    range_start = start_date or datetime(year, 1, 1)
+    range_end = end_date or datetime(year, 12, 31)
+    if range_end < range_start:
+        raise ValueError("end_date must be on or after start_date")
+
+    marked: dict[tuple[int, int], int] = {}
+    current = range_start
+    while current <= range_end:
+        day_of_week = day_of_week_index(current.year, current.month, current.day)
+        week = min(current.isocalendar()[1] - 1, 51)
+        rate = 0.2 if day_of_week in [0, 6] else 0.8
+
+        if random_binary(rate):
+            marked[(week, day_of_week)] = random.randint(1, 4)
+
+        current += timedelta(days=1)
+
+    return marked
