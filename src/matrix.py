@@ -5,12 +5,12 @@ from .module.data_persistence import (
     load_marked_dates, save_marked_dates,
     load_git_config_profile, load_git_profile, save_git_profile
 )
-from .module.deploy import deploy_mock_repo
+from .module.deploy import archive_workspace_repo, deploy_mock_repo, push_workspace_repo
 from .module.matrix_logic import generate_commit_matrix
 from .module.visualization import plot_matrix
 
 
-def run_app(year: int = 2015, filename: str = "data.json") -> None:
+def run_app(year: int = 2025, filename: str = "data.json") -> None:
     """Runs the complete app (settings + matrix editor) in a single pygame window.
     
     Args:
@@ -50,15 +50,20 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
     STATE_MATRIX = 1
     state = STATE_MATRIX
 
-    default_year = 2026
+    default_year = 2025
     default_path = "data.json"
     
     # Settings state variables
     git_profile = load_git_profile()
     applied_year = git_profile.get("year", year)
     applied_file = git_profile.get("path", filename)
+    applied_url = git_profile.get("url", "")
+    applied_force_push = bool(git_profile.get("force_push", False))
+    applied_debug = bool(git_profile.get("debug", False))
     if not isinstance(applied_file, str) or not applied_file.strip():
         applied_file = filename
+    if not isinstance(applied_url, str):
+        applied_url = ""
     try:
         applied_year = int(applied_year)
     except (TypeError, ValueError):
@@ -66,6 +71,9 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
     year = applied_year
     year_text = str(applied_year)
     file_text = applied_file
+    url_text = applied_url
+    force_push_enabled = applied_force_push
+    debug_enabled = applied_debug
     user_text = git_profile.get("user", git_profile.get("username", ""))
     email_text = git_profile.get("email", "")
     token_text = git_profile.get("token", "")
@@ -78,12 +86,15 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
     label_x = settings_panel_x + 40
     field_x = settings_panel_x + 120
     app_settings_rect = pygame.Rect(settings_panel_x + 20, settings_panel_y + 45, settings_panel_width - 40, 120)
-    profile_rect = pygame.Rect(settings_panel_x + 20, settings_panel_y + 180, settings_panel_width - 40, 155)
+    profile_rect = pygame.Rect(settings_panel_x + 20, settings_panel_y + 170, settings_panel_width - 40, 165)
     year_field_rect = pygame.Rect(field_x, settings_panel_y + 78, 350, 30)
-    file_field_rect = pygame.Rect(field_x, settings_panel_y + 118, 350, 30)
-    user_field_rect = pygame.Rect(field_x, settings_panel_y + 213, 350, 30)
-    email_field_rect = pygame.Rect(field_x, settings_panel_y + 253, 350, 30)
-    token_field_rect = pygame.Rect(field_x, settings_panel_y + 293, 350, 30)
+    file_field_rect = pygame.Rect(field_x, settings_panel_y + 112, 350, 30)
+    force_push_rect = pygame.Rect(field_x, settings_panel_y + 146, 24, 24)
+    debug_rect = pygame.Rect(field_x + 188, settings_panel_y + 146, 24, 24)
+    url_field_rect = pygame.Rect(field_x, settings_panel_y + 206, 350, 30)
+    user_field_rect = pygame.Rect(field_x, settings_panel_y + 238, 350, 30)
+    email_field_rect = pygame.Rect(field_x, settings_panel_y + 270, 350, 30)
+    token_field_rect = pygame.Rect(field_x, settings_panel_y + 302, 350, 30)
     default_settings_button_rect = pygame.Rect(settings_panel_x + 20, settings_panel_y + 345, 160, 40)
     apply_button_rect = pygame.Rect(settings_panel_x + 200, settings_panel_y + 345, 160, 40)
     close_button_rect = pygame.Rect(settings_panel_x + 380, settings_panel_y + 345, 160, 40)
@@ -99,13 +110,15 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
     button_gap = 8
     button_x = screen_width - button_width - 12
     bottom_margin = 46
-    new_button_y = screen_height - (button_height * 6 + button_gap * 5 + bottom_margin)
+    new_button_y = screen_height - (button_height * 8 + button_gap * 7 + bottom_margin)
     new_button_rect = pygame.Rect(button_x, new_button_y, button_width, button_height)
     save_button_rect = pygame.Rect(button_x, new_button_y + button_height + button_gap, button_width, button_height)
-    deploy_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 2, button_width, button_height)
-    default_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 3, button_width, button_height)
-    settings_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 4, button_width, button_height)
-    exit_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 5, button_width, button_height)
+    push_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 2, button_width, button_height)
+    deploy_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 3, button_width, button_height)
+    archive_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 4, button_width, button_height)
+    default_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 5, button_width, button_height)
+    settings_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 6, button_width, button_height)
+    exit_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 7, button_width, button_height)
     level_colors = [
         (20, 20, 20),
         (0, 70, 0),
@@ -120,13 +133,17 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
     year_scroll_rect = pygame.Rect(0, 0, 0, 0)
     deploy_status = ""
     deploy_status_color = dark_gray
+    push_status = ""
+    push_status_color = dark_gray
+    archive_status = ""
+    archive_status_color = dark_gray
     
     # Initialize matrix view immediately on app start.
     matrix = generate_commit_matrix(year)
     marked = load_marked_dates(applied_file)
 
     def _set_active_field_value(value: str) -> None:
-        nonlocal year_text, file_text, user_text, email_text, token_text
+        nonlocal year_text, file_text, url_text, user_text, email_text, token_text
         if active_field == 0:
             year_text = "".join(ch for ch in value if ch.isdigit())[:4]
         elif active_field == 1:
@@ -136,6 +153,8 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
         elif active_field == 3:
             email_text = value[:100]
         elif active_field == 4:
+            url_text = value[:200]
+        elif active_field == 5:
             token_text = value[:120]
 
     def _get_active_field_value() -> str:
@@ -144,10 +163,12 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
         if active_field == 1:
             return file_text
         if active_field == 2:
-            return user_text
+            return url_text
         if active_field == 3:
-            return email_text
+            return user_text
         if active_field == 4:
+            return email_text
+        if active_field == 5:
             return token_text
         return ""
 
@@ -183,20 +204,34 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                             active_field = 0
                         elif file_field_rect.collidepoint(pos):
                             active_field = 1
-                        elif user_field_rect.collidepoint(pos):
+                        elif force_push_rect.collidepoint(pos):
+                            force_push_enabled = not force_push_enabled
+                            active_field = None
+                        elif debug_rect.collidepoint(pos):
+                            debug_enabled = not debug_enabled
+                            active_field = None
+                        elif url_field_rect.collidepoint(pos):
                             active_field = 2
-                        elif email_field_rect.collidepoint(pos):
+                        elif user_field_rect.collidepoint(pos):
                             active_field = 3
-                        elif token_field_rect.collidepoint(pos):
+                        elif email_field_rect.collidepoint(pos):
                             active_field = 4
+                        elif token_field_rect.collidepoint(pos):
+                            active_field = 5
                         elif default_settings_button_rect.collidepoint(pos):
                             user_text, email_text, token_text = _load_default_profile_fields()
                             year_text = str(default_year)
                             file_text = default_path
+                            url_text = ""
+                            force_push_enabled = False
+                            debug_enabled = False
                         elif apply_button_rect.collidepoint(pos):
                             try:
                                 applied_year = int(year_text)
                                 applied_file = file_text.strip() if file_text.strip() else default_path
+                                applied_url = url_text.strip()
+                                applied_force_push = force_push_enabled
+                                applied_debug = debug_enabled
                                 year = applied_year
                                 file_text = applied_file
                                 # Save git profile
@@ -206,6 +241,9 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                                     token_text,
                                     year=applied_year,
                                     path=applied_file,
+                                    url=url_text,
+                                    force_push=force_push_enabled,
+                                    debug=debug_enabled,
                                 )
                                 # Generate matrix and load marked dates
                                 matrix = generate_commit_matrix(applied_year)
@@ -218,6 +256,9 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                             year_text = str(applied_year)
                             file_text = applied_file
                             git_profile = load_git_profile()
+                            url_text = git_profile.get("url", "")
+                            force_push_enabled = bool(git_profile.get("force_push", False))
+                            debug_enabled = bool(git_profile.get("debug", False))
                             user_text = git_profile.get("user", git_profile.get("username", ""))
                             email_text = git_profile.get("email", "")
                             token_text = git_profile.get("token", "")
@@ -230,17 +271,23 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                         year_text = str(applied_year)
                         file_text = applied_file
                         git_profile = load_git_profile()
+                        url_text = git_profile.get("url", "")
+                        force_push_enabled = bool(git_profile.get("force_push", False))
+                        debug_enabled = bool(git_profile.get("debug", False))
                         user_text = git_profile.get("user", git_profile.get("username", ""))
                         email_text = git_profile.get("email", "")
                         token_text = git_profile.get("token", "")
                         active_field = None
                         state = STATE_MATRIX
                     elif event.key == pygame.K_TAB:
-                        active_field = (active_field + 1) % 5 if active_field is not None else 0
+                        active_field = (active_field + 1) % 6 if active_field is not None else 0
                     elif event.key == pygame.K_RETURN and active_field is not None:
                         try:
                             applied_year = int(year_text)
                             applied_file = file_text.strip() if file_text.strip() else default_path
+                            applied_url = url_text.strip()
+                            applied_force_push = force_push_enabled
+                            applied_debug = debug_enabled
                             year = applied_year
                             file_text = applied_file
                             save_git_profile(
@@ -249,6 +296,9 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                                 token_text,
                                 year=applied_year,
                                 path=applied_file,
+                                url=url_text,
+                                force_push=force_push_enabled,
+                                debug=debug_enabled,
                             )
                             matrix = generate_commit_matrix(applied_year)
                             marked = load_marked_dates(applied_file)
@@ -287,6 +337,19 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                             drag_left_active = False
                             drag_right_active = False
                             drag_last_cell = None
+                        elif push_button_rect.collidepoint((x, y)):
+                            push_status = "Pushing..."
+                            push_status_color = green
+                            try:
+                                pushed_url = push_workspace_repo()
+                                push_status = f"Pushed to {pushed_url}"
+                                push_status_color = green
+                            except Exception as exc:
+                                push_status = f"Push failed: {exc}"
+                                push_status_color = white
+                            drag_left_active = False
+                            drag_right_active = False
+                            drag_last_cell = None
                         elif deploy_button_rect.collidepoint((x, y)):
                             deploy_status = "Deploying..."
                             deploy_status_color = green
@@ -297,6 +360,19 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                             except Exception as exc:
                                 deploy_status = f"Deploy failed: {exc}"
                                 deploy_status_color = white
+                            drag_left_active = False
+                            drag_right_active = False
+                            drag_last_cell = None
+                        elif archive_button_rect.collidepoint((x, y)):
+                            archive_status = "Archiving..."
+                            archive_status_color = green
+                            try:
+                                archive_path = archive_workspace_repo()
+                                archive_status = f"Archived to {archive_path.name}"
+                                archive_status_color = green
+                            except Exception as exc:
+                                archive_status = f"Archive failed: {exc}"
+                                archive_status_color = white
                             drag_left_active = False
                             drag_right_active = False
                             drag_last_cell = None
@@ -319,6 +395,7 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                             user_text = git_profile.get("user", git_profile.get("username", ""))
                             email_text = git_profile.get("email", "")
                             token_text = git_profile.get("token", "")
+                            debug_enabled = bool(git_profile.get("debug", False))
                             active_field = None
                         elif grid_x <= x < grid_x + grid_width and grid_y <= y < grid_y + grid_height:
                             week = (x - grid_x) // cell_size
@@ -382,6 +459,9 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                         year_text = str(applied_year)
                         file_text = applied_file
                         git_profile = load_git_profile()
+                        url_text = git_profile.get("url", "")
+                        force_push_enabled = bool(git_profile.get("force_push", False))
+                        debug_enabled = bool(git_profile.get("debug", False))
                         user_text = git_profile.get("user", git_profile.get("username", ""))
                         email_text = git_profile.get("email", "")
                         token_text = git_profile.get("token", "")
@@ -419,24 +499,47 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
             pygame.draw.rect(screen, file_field_color, file_field_rect, 2)
             file_display = small_font.render(file_text[-30:], True, white)
             screen.blit(file_display, (file_field_rect.x + 10, file_field_rect.y + 13))
+
+            force_label = small_font.render("Force Push:", True, white)
+            screen.blit(force_label, (label_x - 18, force_push_rect.y + 8))
+            pygame.draw.rect(screen, green if force_push_enabled else gray, force_push_rect, 2)
+            if force_push_enabled:
+                force_mark = small_font.render("X", True, green)
+                force_mark_rect = force_mark.get_rect(center=force_push_rect.center)
+                screen.blit(force_mark, force_mark_rect)
+
+            debug_label = small_font.render("Debug:", True, white)
+            screen.blit(debug_label, (debug_rect.x + 32, debug_rect.y + 8))
+            pygame.draw.rect(screen, green if debug_enabled else gray, debug_rect, 2)
+            if debug_enabled:
+                debug_mark = small_font.render("X", True, green)
+                debug_mark_rect = debug_mark.get_rect(center=debug_rect.center)
+                screen.blit(debug_mark, debug_mark_rect)
             
+            url_label = small_font.render("URL:", True, white)
+            screen.blit(url_label, (label_x + 2, url_field_rect.y + 13))
+            url_field_color = green if active_field == 2 else gray
+            pygame.draw.rect(screen, url_field_color, url_field_rect, 2)
+            url_display = small_font.render(url_text[-30:] if url_text else "", True, white)
+            screen.blit(url_display, (url_field_rect.x + 10, url_field_rect.y + 13))
+
             user_label = small_font.render("User:", True, white)
             screen.blit(user_label, (label_x + 10, user_field_rect.y + 13))
-            user_field_color = green if active_field == 2 else gray
+            user_field_color = green if active_field == 3 else gray
             pygame.draw.rect(screen, user_field_color, user_field_rect, 2)
             user_display = small_font.render(user_text[-30:] if user_text else "", True, white)
             screen.blit(user_display, (user_field_rect.x + 10, user_field_rect.y + 13))
             
             email_label = small_font.render("Email:", True, white)
             screen.blit(email_label, (label_x + 5, email_field_rect.y + 13))
-            email_field_color = green if active_field == 3 else gray
+            email_field_color = green if active_field == 4 else gray
             pygame.draw.rect(screen, email_field_color, email_field_rect, 2)
             email_display = small_font.render(email_text[-30:] if email_text else "", True, white)
             screen.blit(email_display, (email_field_rect.x + 10, email_field_rect.y + 13))
 
             token_label = small_font.render("Token:", True, white)
             screen.blit(token_label, (label_x + 8, token_field_rect.y + 10))
-            token_field_color = green if active_field == 4 else gray
+            token_field_color = green if active_field == 5 else gray
             pygame.draw.rect(screen, token_field_color, token_field_rect, 2)
             token_masked = "*" * min(len(token_text), 30)
             token_display = small_font.render(token_masked, True, white)
@@ -463,7 +566,7 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
             close_rect = close_text.get_rect(center=close_button_rect.center)
             screen.blit(close_text, close_rect)
             
-            instructions = small_font.render("DEFAULT restores year/path and git profile | Enter to apply", True, dark_gray)
+            instructions = small_font.render("DEFAULT restores year/path and clears push options | Enter to apply", True, dark_gray)
             instructions_rect = instructions.get_rect(center=(screen_width // 2, screen_height - 12))
             screen.blit(instructions, instructions_rect)
         
@@ -520,11 +623,23 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
             save_text_rect = save_text.get_rect(center=save_button_rect.center)
             screen.blit(save_text, save_text_rect)
 
+            push_button_color = green if push_button_rect.collidepoint(pygame.mouse.get_pos()) else white
+            pygame.draw.rect(screen, push_button_color, push_button_rect, 2)
+            push_text = small_font.render("PUSH", True, push_button_color)
+            push_text_rect = push_text.get_rect(center=push_button_rect.center)
+            screen.blit(push_text, push_text_rect)
+
             deploy_button_color = green if deploy_button_rect.collidepoint(pygame.mouse.get_pos()) else white
             pygame.draw.rect(screen, deploy_button_color, deploy_button_rect, 2)
             deploy_text = small_font.render("DEPLOY", True, deploy_button_color)
             deploy_text_rect = deploy_text.get_rect(center=deploy_button_rect.center)
             screen.blit(deploy_text, deploy_text_rect)
+
+            archive_button_color = green if archive_button_rect.collidepoint(pygame.mouse.get_pos()) else white
+            pygame.draw.rect(screen, archive_button_color, archive_button_rect, 2)
+            archive_text = small_font.render("ARCHIVE", True, archive_button_color)
+            archive_text_rect = archive_text.get_rect(center=archive_button_rect.center)
+            screen.blit(archive_text, archive_text_rect)
 
             default_button_color = green if default_button_rect.collidepoint(pygame.mouse.get_pos()) else white
             pygame.draw.rect(screen, default_button_color, default_button_rect, 2)
@@ -548,6 +663,16 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                 status_surface = small_font.render(deploy_status[:72], True, deploy_status_color)
                 status_rect = status_surface.get_rect(center=(screen_width // 2, screen_height - 28))
                 screen.blit(status_surface, status_rect)
+
+            if push_status:
+                push_surface = small_font.render(push_status[:72], True, push_status_color)
+                push_rect = push_surface.get_rect(center=(screen_width // 2, screen_height - 40))
+                screen.blit(push_surface, push_rect)
+
+            if archive_status:
+                archive_surface = small_font.render(archive_status[:72], True, archive_status_color)
+                archive_rect = archive_surface.get_rect(center=(screen_width // 2, screen_height - 52))
+                screen.blit(archive_surface, archive_rect)
             
             instructions = small_font.render("Left drag:+level | Right drag:erase | Scroll on year number to change year", True, dark_gray)
             instructions_rect = instructions.get_rect(center=(screen_width // 2, screen_height - 12))

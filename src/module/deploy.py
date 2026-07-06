@@ -6,6 +6,8 @@ import os
 import re
 import shutil
 import subprocess
+import zipfile
+from urllib.parse import quote, urlparse, urlunparse
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -35,6 +37,21 @@ def _run_git(command: list[str], cwd: Path, env: dict[str, str] | None = None) -
         raise RuntimeError(message)
 
 
+def _build_authenticated_url(remote_url: str, login: str, token: str) -> str:
+    parsed = urlparse(remote_url)
+    if parsed.scheme not in {"http", "https"}:
+        return remote_url
+    if not token.strip():
+        return remote_url
+    netloc = parsed.netloc
+    if "@" in netloc:
+        netloc = netloc.split("@", 1)[1]
+    auth_user = quote(login.strip() or "oauth2", safe="")
+    auth_token = quote(token.strip(), safe="")
+    auth_netloc = f"{auth_user}:{auth_token}@{netloc}"
+    return urlunparse((parsed.scheme, auth_netloc, parsed.path, parsed.params, parsed.query, parsed.fragment))
+
+
 def _clean_workspace(repo_path: Path) -> None:
     if repo_path.is_dir():
         shutil.rmtree(repo_path)
@@ -52,6 +69,7 @@ def deploy_mock_repo(
     profile = load_git_profile()
     user_name = profile.get("user", "").strip()
     user_email = profile.get("email", "").strip()
+    debug_mode = bool(profile.get("debug", False))
     if not user_name or not user_email:
         raise ValueError("Missing git user or email in schema/configs.json")
 
@@ -70,9 +88,11 @@ def deploy_mock_repo(
     _run_git(["git", "config", "user.name", user_name], cwd=repo_path)
     _run_git(["git", "config", "user.email", user_email], cwd=repo_path)
 
-    history_file = repo_path / "history.log"
-    history_file.write_text("Mock commit history\n", encoding="utf-8")
-    _run_git(["git", "add", "history.log"], cwd=repo_path)
+    history_file: Path | None = None
+    if debug_mode:
+        history_file = repo_path / "history.log"
+        history_file.write_text("Mock commit history\n", encoding="utf-8")
+        _run_git(["git", "add", "history.log"], cwd=repo_path)
 
     commit_total = 0
     for entry_date, level in schedule:
@@ -80,10 +100,10 @@ def deploy_mock_repo(
             commit_total += 1
             commit_time = entry_date.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(minutes=index)
             iso_timestamp = commit_time.isoformat()
-            with history_file.open("a", encoding="utf-8") as handle:
-                handle.write(f"{iso_timestamp} | level={level} | commit={index + 1}\n")
-
-            _run_git(["git", "add", "history.log"], cwd=repo_path)
+            if history_file is not None:
+                with history_file.open("a", encoding="utf-8") as handle:
+                    handle.write(f"{iso_timestamp} | level={level} | commit={index + 1}\n")
+                _run_git(["git", "add", "history.log"], cwd=repo_path)
             env = os.environ.copy()
             env.update(
                 {
@@ -95,15 +115,84 @@ def deploy_mock_repo(
                     "GIT_COMMITTER_DATE": iso_timestamp,
                 }
             )
+            commit_command = [
+                "git",
+                "commit",
+                "-m",
+                f"mock commit {commit_total} for {entry_date.date().isoformat()} level {level}",
+            ]
+            if not debug_mode:
+                commit_command.insert(2, "--allow-empty")
             _run_git(
-                [
-                    "git",
-                    "commit",
-                    "-m",
-                    f"mock commit {commit_total} for {entry_date.date().isoformat()} level {level}",
-                ],
+                commit_command,
                 cwd=repo_path,
                 env=env,
             )
 
     return repo_path, commit_total
+
+
+def push_workspace_repo(workspace_root: str | os.PathLike[str] | None = None) -> str:
+    """Push the workspace repository to the configured remote URL."""
+    profile = load_git_profile()
+    user_name = profile.get("user", "").strip()
+    user_email = profile.get("email", "").strip()
+    remote_url = profile.get("url", "").strip()
+    token = profile.get("token", "").strip()
+    force_push = bool(profile.get("force_push", False))
+    if not remote_url:
+        raise ValueError("Missing remote URL in schema/configs.json")
+
+    root = Path(workspace_root or os.getcwd())
+    repo_path = _build_repo_path(root, 0, "data.json")
+    repo_path.mkdir(parents=True, exist_ok=True)
+    if not (repo_path / ".git").exists():
+        _run_git(["git", "init"], cwd=repo_path)
+
+    if user_name:
+        _run_git(["git", "config", "user.name", user_name], cwd=repo_path)
+    if user_email:
+        _run_git(["git", "config", "user.email", user_email], cwd=repo_path)
+
+    authenticated_url = _build_authenticated_url(remote_url, user_email, token)
+    remote_check = subprocess.run(
+        ["git", "remote", "get-url", "origin"],
+        cwd=repo_path,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if remote_check.returncode == 0:
+        _run_git(["git", "remote", "set-url", "origin", authenticated_url], cwd=repo_path)
+    else:
+        _run_git(["git", "remote", "add", "origin", authenticated_url], cwd=repo_path)
+    _run_git(["git", "branch", "-M", "main"], cwd=repo_path)
+    push_command = ["git", "push"]
+    if force_push:
+        push_command.append("--force")
+    push_command.extend(["-u", "origin", "main"])
+    _run_git(push_command, cwd=repo_path)
+    return authenticated_url
+
+
+def archive_workspace_repo(workspace_root: str | os.PathLike[str] | None = None) -> Path:
+    """Archive the current workspace repository to a zip file."""
+    root = Path(workspace_root or os.getcwd())
+    repo_path = _build_repo_path(root, 0, "data.json")
+    if not repo_path.exists():
+        raise ValueError("Workspace repository does not exist")
+
+    archive_base = root / "workspace"
+    archive_path = archive_base.with_suffix(".zip")
+    if archive_path.exists():
+        archive_path.unlink()
+
+    extra_files = [root / "schema" / "data.json", root / "schema" / "configs.json"]
+    with zipfile.ZipFile(archive_path, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for path in repo_path.rglob("*"):
+            if path.is_file():
+                archive.write(path, arcname=path.relative_to(repo_path))
+        for path in extra_files:
+            if path.is_file():
+                archive.write(path, arcname=path.relative_to(root))
+    return archive_path

@@ -13,3 +13,4 @@ wheels/
 /schema/*
 !/schema/default-data.json
 
+*.zip

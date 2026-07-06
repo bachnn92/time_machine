@@ -50,6 +50,9 @@ def _default_git_profile() -> dict:
         "token": "",
         "year": 2026,
         "path": "data.json",
+        "url": "",
+        "force_push": False,
+        "debug": False,
     }
 
 
@@ -149,7 +152,7 @@ def load_git_profile(filename: str = "configs.json") -> dict:
         filename: Simple filename (stored in schema/) or full path (used as-is)
     
     Returns:
-        Dictionary with 'user', 'email', 'token', 'year', and 'path' keys
+        Dictionary with user/profile values and settings fields
     """
     filepath = _get_filepath(filename)
     defaults = _default_git_profile()
@@ -164,12 +167,17 @@ def load_git_profile(filename: str = "configs.json") -> dict:
 
         year_value = settings_data.get("year", 2026)
         path_value = settings_data.get("path", "data.json")
+        url_value = profile_data.get("url", settings_data.get("url", ""))
+        force_push_value = settings_data.get("force_push", False)
+        debug_value = settings_data.get("debug", False)
         try:
             year_value = int(year_value)
         except (TypeError, ValueError):
             year_value = defaults["year"]
         if not isinstance(path_value, str) or not path_value.strip():
             path_value = defaults["path"]
+        if not isinstance(url_value, str):
+            url_value = defaults["url"]
         user_value = profile_data.get("user", profile_data.get("username", ""))
         email_value = profile_data.get("email", "")
         return {
@@ -178,6 +186,9 @@ def load_git_profile(filename: str = "configs.json") -> dict:
             "token": profile_data.get("token", ""),
             "year": year_value,
             "path": path_value,
+            "url": url_value.strip() if isinstance(url_value, str) else defaults["url"],
+            "force_push": bool(force_push_value),
+            "debug": bool(debug_value),
         }
     except:
         return defaults
@@ -189,6 +200,9 @@ def save_git_profile(
     token: str = "",
     year: int = 2026,
     path: str = "data.json",
+    url: str = "",
+    force_push: bool = False,
+    debug: bool = False,
     filename: str = "configs.json",
 ) -> None:
     """Saves git profile and app settings to JSON file.
@@ -206,10 +220,13 @@ def save_git_profile(
             "user": user.strip(),
             "email": email.strip(),
             "token": token.strip(),
+            "url": url.strip() if isinstance(url, str) and url.strip() else "",
         },
         "settings": {
             "year": int(year),
             "path": path.strip() if isinstance(path, str) and path.strip() else "data.json",
+            "force_push": bool(force_push),
+            "debug": bool(debug),
         },
     }
     
