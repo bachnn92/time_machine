@@ -58,6 +58,37 @@ def load_git_config_profile() -> dict[str, str]:
     return _load_git_config_defaults()
 
 
+def load_commit_schedule(filename: str = "data.json") -> list[tuple[datetime, int]]:
+    """Load saved dates as a sorted commit schedule of (datetime, level)."""
+    filepath = _get_filepath(filename)
+    if not os.path.exists(filepath):
+        return []
+    try:
+        with open(filepath, 'r') as f:
+            data = json.load(f)
+
+        schedule: list[tuple[datetime, int]] = []
+        if isinstance(data, list) and (not data or isinstance(data[0], str)):
+            for date_str in data:
+                schedule.append((datetime.fromisoformat(date_str), 4))
+        elif isinstance(data, list):
+            for item in data:
+                if not isinstance(item, dict):
+                    continue
+                date_str = item.get("date")
+                if not isinstance(date_str, str):
+                    continue
+                level = _clamp_level(int(item.get("level", 4)))
+                if level <= 0:
+                    continue
+                schedule.append((datetime.fromisoformat(date_str), level))
+
+        schedule.sort(key=lambda item: item[0])
+        return schedule
+    except:
+        return []
+
+
 def load_marked_dates(filename: str = "data.json") -> dict[tuple[int, int], int]:
     """Loads marked dates and levels from JSON file.
     
@@ -68,35 +99,12 @@ def load_marked_dates(filename: str = "data.json") -> dict[tuple[int, int], int]
     if not os.path.exists(filepath):
         return {}
     try:
-        with open(filepath, 'r') as f:
-            data = json.load(f)
-
         marked: dict[tuple[int, int], int] = {}
 
-        # Backward-compatible format: ["ISO_DATE", ...]
-        if isinstance(data, list) and (not data or isinstance(data[0], str)):
-            for date_str in data:
-                dt = datetime.fromisoformat(date_str)
-                week = min(dt.isocalendar()[1] - 1, 51)
-                day = day_of_week_index(dt.year, dt.month, dt.day)
-                marked[(week, day)] = 4
-            return marked
-
-        # New format: [{"date": "ISO_DATE", "level": N}, ...]
-        if isinstance(data, list):
-            for item in data:
-                if not isinstance(item, dict):
-                    continue
-                date_str = item.get("date")
-                if not isinstance(date_str, str):
-                    continue
-                level = _clamp_level(int(item.get("level", 4)))
-                if level <= 0:
-                    continue
-                dt = datetime.fromisoformat(date_str)
-                week = min(dt.isocalendar()[1] - 1, 51)
-                day = day_of_week_index(dt.year, dt.month, dt.day)
-                marked[(week, day)] = level
+        for dt, level in load_commit_schedule(filename):
+            week = min(dt.isocalendar()[1] - 1, 51)
+            day = day_of_week_index(dt.year, dt.month, dt.day)
+            marked[(week, day)] = level
 
         return marked
     except:

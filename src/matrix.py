@@ -5,6 +5,7 @@ from .module.data_persistence import (
     load_marked_dates, save_marked_dates,
     load_git_config_profile, load_git_profile, save_git_profile
 )
+from .module.deploy import deploy_mock_repo
 from .module.matrix_logic import generate_commit_matrix
 from .module.visualization import plot_matrix
 
@@ -98,12 +99,13 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
     button_gap = 8
     button_x = screen_width - button_width - 12
     bottom_margin = 46
-    new_button_y = screen_height - (button_height * 5 + button_gap * 4 + bottom_margin)
+    new_button_y = screen_height - (button_height * 6 + button_gap * 5 + bottom_margin)
     new_button_rect = pygame.Rect(button_x, new_button_y, button_width, button_height)
     save_button_rect = pygame.Rect(button_x, new_button_y + button_height + button_gap, button_width, button_height)
-    default_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 2, button_width, button_height)
-    settings_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 3, button_width, button_height)
-    exit_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 4, button_width, button_height)
+    deploy_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 2, button_width, button_height)
+    default_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 3, button_width, button_height)
+    settings_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 4, button_width, button_height)
+    exit_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 5, button_width, button_height)
     level_colors = [
         (20, 20, 20),
         (0, 70, 0),
@@ -116,6 +118,8 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
     drag_right_active = False
     drag_last_cell: tuple[int, int] | None = None
     year_scroll_rect = pygame.Rect(0, 0, 0, 0)
+    deploy_status = ""
+    deploy_status_color = dark_gray
     
     # Initialize matrix view immediately on app start.
     matrix = generate_commit_matrix(year)
@@ -278,11 +282,26 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                             drag_last_cell = None
                         elif save_button_rect.collidepoint((x, y)):
                             save_marked_dates(marked, year, applied_file)
+                            deploy_status = f"Saved {applied_file}"
+                            deploy_status_color = dark_gray
+                            drag_left_active = False
+                            drag_right_active = False
+                            drag_last_cell = None
+                        elif deploy_button_rect.collidepoint((x, y)):
+                            try:
+                                repo_path, commit_total = deploy_mock_repo(marked, year, applied_file)
+                                deploy_status = f"Deployed {repo_path.name} with {commit_total} commits"
+                                deploy_status_color = green
+                            except Exception as exc:
+                                deploy_status = f"Deploy failed: {exc}"
+                                deploy_status_color = white
                             drag_left_active = False
                             drag_right_active = False
                             drag_last_cell = None
                         elif default_button_rect.collidepoint((x, y)):
                             marked = load_marked_dates("default-data.json")
+                            deploy_status = "Loaded default-data.json"
+                            deploy_status_color = dark_gray
                             drag_left_active = False
                             drag_right_active = False
                             drag_last_cell = None
@@ -499,6 +518,12 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
             save_text_rect = save_text.get_rect(center=save_button_rect.center)
             screen.blit(save_text, save_text_rect)
 
+            deploy_button_color = green if deploy_button_rect.collidepoint(pygame.mouse.get_pos()) else white
+            pygame.draw.rect(screen, deploy_button_color, deploy_button_rect, 2)
+            deploy_text = small_font.render("DEPLOY", True, deploy_button_color)
+            deploy_text_rect = deploy_text.get_rect(center=deploy_button_rect.center)
+            screen.blit(deploy_text, deploy_text_rect)
+
             default_button_color = green if default_button_rect.collidepoint(pygame.mouse.get_pos()) else white
             pygame.draw.rect(screen, default_button_color, default_button_rect, 2)
             default_text = small_font.render("DEFAULT", True, default_button_color)
@@ -516,6 +541,11 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
             exit_text = small_font.render("EXIT", True, exit_button_color)
             exit_text_rect = exit_text.get_rect(center=exit_button_rect.center)
             screen.blit(exit_text, exit_text_rect)
+
+            if deploy_status:
+                status_surface = small_font.render(deploy_status[:72], True, deploy_status_color)
+                status_rect = status_surface.get_rect(center=(screen_width // 2, screen_height - 28))
+                screen.blit(status_surface, status_rect)
             
             instructions = small_font.render("Left drag:+level | Right drag:erase | Scroll on year number to change year", True, dark_gray)
             instructions_rect = instructions.get_rect(center=(screen_width // 2, screen_height - 12))
