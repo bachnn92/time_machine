@@ -79,25 +79,27 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     token_text = git_profile.get("token", "")
     active_field = None
 
-    settings_panel_width = 560
-    settings_panel_height = 400
+    settings_panel_width = min(700, screen_width - 40)
+    settings_panel_height = min(370, screen_height - 24)
     settings_panel_x = (screen_width - settings_panel_width) // 2
     settings_panel_y = (screen_height - settings_panel_height) // 2
     label_x = settings_panel_x + 40
     field_x = settings_panel_x + 120
-    app_settings_rect = pygame.Rect(settings_panel_x + 20, settings_panel_y + 45, settings_panel_width - 40, 120)
-    profile_rect = pygame.Rect(settings_panel_x + 20, settings_panel_y + 170, settings_panel_width - 40, 165)
-    year_field_rect = pygame.Rect(field_x, settings_panel_y + 78, 350, 30)
-    file_field_rect = pygame.Rect(field_x, settings_panel_y + 112, 350, 30)
-    force_push_rect = pygame.Rect(field_x, settings_panel_y + 146, 24, 24)
-    debug_rect = pygame.Rect(field_x + 188, settings_panel_y + 146, 24, 24)
-    url_field_rect = pygame.Rect(field_x, settings_panel_y + 206, 350, 30)
-    user_field_rect = pygame.Rect(field_x, settings_panel_y + 238, 350, 30)
-    email_field_rect = pygame.Rect(field_x, settings_panel_y + 270, 350, 30)
-    token_field_rect = pygame.Rect(field_x, settings_panel_y + 302, 350, 30)
-    default_settings_button_rect = pygame.Rect(settings_panel_x + 20, settings_panel_y + 345, 160, 40)
-    apply_button_rect = pygame.Rect(settings_panel_x + 200, settings_panel_y + 345, 160, 40)
-    close_button_rect = pygame.Rect(settings_panel_x + 380, settings_panel_y + 345, 160, 40)
+    field_width = settings_panel_width - 180
+    visible_text_chars = max(40, (field_width - 30) // 8)
+    profile_rect = pygame.Rect(settings_panel_x + 20, settings_panel_y + 45, settings_panel_width - 40, 175)
+    app_settings_rect = pygame.Rect(settings_panel_x + 20, settings_panel_y + 225, settings_panel_width - 40, 95)
+    user_field_rect = pygame.Rect(field_x, settings_panel_y + 78, field_width, 30)
+    email_field_rect = pygame.Rect(field_x, settings_panel_y + 112, field_width, 30)
+    url_field_rect = pygame.Rect(field_x, settings_panel_y + 146, field_width, 30)
+    token_field_rect = pygame.Rect(field_x, settings_panel_y + 180, field_width, 30)
+    year_field_rect = pygame.Rect(field_x, settings_panel_y + 244, field_width, 30)
+    file_field_rect = pygame.Rect(field_x, settings_panel_y + 278, field_width, 30)
+    force_push_rect = pygame.Rect(field_x, settings_panel_y + 310, 24, 24)
+    debug_rect = pygame.Rect(field_x + 188, settings_panel_y + 310, 24, 24)
+    default_settings_button_rect = pygame.Rect(settings_panel_x + 20, settings_panel_y + settings_panel_height - 44, 160, 32)
+    apply_button_rect = pygame.Rect(settings_panel_x + 200, settings_panel_y + settings_panel_height - 44, 160, 32)
+    close_button_rect = pygame.Rect(settings_panel_x + 380, settings_panel_y + settings_panel_height - 44, 160, 32)
     
     # Matrix state variables
     matrix = None
@@ -498,7 +500,30 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             pygame.draw.rect(screen, gray, profile_rect, 1)
             profile_title = small_font.render("Profile", True, green)
             screen.blit(profile_title, (profile_rect.x + 8, profile_rect.y + 6))
+            profile_label_x = label_x + 2
             
+            user_label = small_font.render("User:", True, white)
+            screen.blit(user_label, (profile_label_x, user_field_rect.y + 13))
+            user_field_color = green if active_field == 3 else gray
+            pygame.draw.rect(screen, user_field_color, user_field_rect, 2)
+            user_display = small_font.render(user_text[-visible_text_chars:] if user_text else "", True, white)
+            screen.blit(user_display, (user_field_rect.x + 10, user_field_rect.y + 13))
+            
+            email_label = small_font.render("Email:", True, white)
+            screen.blit(email_label, (profile_label_x, email_field_rect.y + 13))
+            email_field_color = green if active_field == 4 else gray
+            pygame.draw.rect(screen, email_field_color, email_field_rect, 2)
+            email_display = small_font.render(email_text[-visible_text_chars:] if email_text else "", True, white)
+            screen.blit(email_display, (email_field_rect.x + 10, email_field_rect.y + 13))
+
+            token_label = small_font.render("Token:", True, white)
+            screen.blit(token_label, (profile_label_x, token_field_rect.y + 13))
+            token_field_color = green if active_field == 5 else gray
+            pygame.draw.rect(screen, token_field_color, token_field_rect, 2)
+            token_masked = "*" * min(len(token_text), visible_text_chars)
+            token_display = small_font.render(token_masked, True, white)
+            screen.blit(token_display, (token_field_rect.x + 10, token_field_rect.y + 13))
+
             year_label = small_font.render("Year:", True, white)
             screen.blit(year_label, (label_x, year_field_rect.y + 13))
             year_field_color = green if active_field == 0 else gray
@@ -510,7 +535,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             screen.blit(file_label, (label_x, file_field_rect.y + 13))
             file_field_color = green if active_field == 1 else gray
             pygame.draw.rect(screen, file_field_color, file_field_rect, 2)
-            file_display = small_font.render(file_text[-30:], True, white)
+            file_display = small_font.render(file_text[-visible_text_chars:] if file_text else "", True, white)
             screen.blit(file_display, (file_field_rect.x + 10, file_field_rect.y + 13))
 
             force_label = small_font.render("Force Push:", True, white)
@@ -528,35 +553,13 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 debug_mark = small_font.render("X", True, green)
                 debug_mark_rect = debug_mark.get_rect(center=debug_rect.center)
                 screen.blit(debug_mark, debug_mark_rect)
-            
+
             url_label = small_font.render("URL:", True, white)
-            screen.blit(url_label, (label_x + 2, url_field_rect.y + 13))
+            screen.blit(url_label, (profile_label_x, url_field_rect.y + 13))
             url_field_color = green if active_field == 2 else gray
             pygame.draw.rect(screen, url_field_color, url_field_rect, 2)
-            url_display = small_font.render(url_text[-30:] if url_text else "", True, white)
+            url_display = small_font.render(url_text[-visible_text_chars:] if url_text else "", True, white)
             screen.blit(url_display, (url_field_rect.x + 10, url_field_rect.y + 13))
-
-            user_label = small_font.render("User:", True, white)
-            screen.blit(user_label, (label_x + 10, user_field_rect.y + 13))
-            user_field_color = green if active_field == 3 else gray
-            pygame.draw.rect(screen, user_field_color, user_field_rect, 2)
-            user_display = small_font.render(user_text[-30:] if user_text else "", True, white)
-            screen.blit(user_display, (user_field_rect.x + 10, user_field_rect.y + 13))
-            
-            email_label = small_font.render("Email:", True, white)
-            screen.blit(email_label, (label_x + 5, email_field_rect.y + 13))
-            email_field_color = green if active_field == 4 else gray
-            pygame.draw.rect(screen, email_field_color, email_field_rect, 2)
-            email_display = small_font.render(email_text[-30:] if email_text else "", True, white)
-            screen.blit(email_display, (email_field_rect.x + 10, email_field_rect.y + 13))
-
-            token_label = small_font.render("Token:", True, white)
-            screen.blit(token_label, (label_x + 8, token_field_rect.y + 10))
-            token_field_color = green if active_field == 5 else gray
-            pygame.draw.rect(screen, token_field_color, token_field_rect, 2)
-            token_masked = "*" * min(len(token_text), 30)
-            token_display = small_font.render(token_masked, True, white)
-            screen.blit(token_display, (token_field_rect.x + 10, token_field_rect.y + 10))
 
             # DEFAULT button
             default_settings_button_color = green if default_settings_button_rect.collidepoint(pygame.mouse.get_pos()) else white
