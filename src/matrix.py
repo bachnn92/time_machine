@@ -135,12 +135,8 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     drag_right_active = False
     drag_last_cell: tuple[int, int] | None = None
     year_scroll_rect = pygame.Rect(0, 0, 0, 0)
-    deploy_status = ""
-    deploy_status_color = dark_gray
-    push_status = ""
-    push_status_color = dark_gray
-    archive_status = ""
-    archive_status_color = dark_gray
+    matrix_status = ""
+    matrix_status_color = dark_gray
     
     # Initialize matrix view immediately on app start.
     matrix = generate_commit_matrix(year)
@@ -261,8 +257,12 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 # Generate matrix and load marked dates
                                 matrix = generate_commit_matrix(applied_year)
                                 marked = load_marked_dates(applied_file)
+                                matrix_status = "Settings applied"
+                                matrix_status_color = green
                                 state = STATE_MATRIX
                             except ValueError:
+                                matrix_status = "Apply failed: year must be a number"
+                                matrix_status_color = white
                                 year_text = str(applied_year)
                         elif close_button_rect.collidepoint(pos):
                             # Return to matrix and discard unsaved settings edits
@@ -276,6 +276,8 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             email_text = git_profile.get("email", "")
                             token_text = git_profile.get("token", "")
                             active_field = None
+                            matrix_status = "Settings canceled"
+                            matrix_status_color = dark_gray
                             pygame.key.stop_text_input()
                             state = STATE_MATRIX
                 
@@ -292,6 +294,8 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         email_text = git_profile.get("email", "")
                         token_text = git_profile.get("token", "")
                         active_field = None
+                        matrix_status = "Settings canceled"
+                        matrix_status_color = dark_gray
                         pygame.key.stop_text_input()
                         state = STATE_MATRIX
                     elif event.key == pygame.K_TAB:
@@ -317,9 +321,13 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             )
                             matrix = generate_commit_matrix(applied_year)
                             marked = load_marked_dates(applied_file)
+                            matrix_status = "Settings applied"
+                            matrix_status_color = green
                             pygame.key.stop_text_input()
                             state = STATE_MATRIX
                         except ValueError:
+                            matrix_status = "Apply failed: year must be a number"
+                            matrix_status_color = white
                             year_text = str(applied_year)
                     elif event.key == pygame.K_BACKSPACE and active_field is not None:
                         _set_active_field_value(_get_active_field_value()[:-1])
@@ -343,67 +351,67 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         if new_button_rect.collidepoint((x, y)):
                             marked.clear()
                             save_marked_dates(marked, year, applied_file)
+                            matrix_status = "New matrix created"
+                            matrix_status_color = green
                             drag_left_active = False
                             drag_right_active = False
                             drag_last_cell = None
                         elif save_button_rect.collidepoint((x, y)):
                             save_marked_dates(marked, year, applied_file)
-                            deploy_status = f"Saved {applied_file}"
-                            deploy_status_color = dark_gray
+                            matrix_status = f"Saved {applied_file}"
+                            matrix_status_color = green
                             drag_left_active = False
                             drag_right_active = False
                             drag_last_cell = None
                         elif push_button_rect.collidepoint((x, y)):
-                            push_status = "Pushing..."
-                            push_status_color = green
                             try:
                                 pushed_url = push_workspace_repo()
-                                push_status = f"Pushed to {pushed_url}"
-                                push_status_color = green
+                                matrix_status = f"Pushed to {pushed_url}"
+                                matrix_status_color = green
                             except Exception as exc:
-                                push_status = f"Push failed: {exc}"
-                                push_status_color = white
+                                matrix_status = f"Push failed: {exc}"
+                                matrix_status_color = white
                             drag_left_active = False
                             drag_right_active = False
                             drag_last_cell = None
                         elif deploy_button_rect.collidepoint((x, y)):
-                            deploy_status = "Deploying..."
-                            deploy_status_color = green
                             try:
                                 repo_path, commit_total = deploy_mock_repo(marked, year, applied_file)
-                                deploy_status = f"Deployed {repo_path.name} with {commit_total} commits"
-                                deploy_status_color = green
+                                matrix_status = f"Deployed {repo_path.name} with {commit_total} commits"
+                                matrix_status_color = green
                             except Exception as exc:
-                                deploy_status = f"Deploy failed: {exc}"
-                                deploy_status_color = white
+                                matrix_status = f"Deploy failed: {exc}"
+                                matrix_status_color = white
                             drag_left_active = False
                             drag_right_active = False
                             drag_last_cell = None
                         elif archive_button_rect.collidepoint((x, y)):
-                            archive_status = "Archiving..."
-                            archive_status_color = green
                             try:
                                 archive_path = archive_workspace_repo()
-                                archive_status = f"Archived to {archive_path.name}"
-                                archive_status_color = green
+                                matrix_status = f"Archived to {archive_path.name}"
+                                matrix_status_color = green
                             except Exception as exc:
-                                archive_status = f"Archive failed: {exc}"
-                                archive_status_color = white
+                                matrix_status = f"Archive failed: {exc}"
+                                matrix_status_color = white
                             drag_left_active = False
                             drag_right_active = False
                             drag_last_cell = None
                         elif default_button_rect.collidepoint((x, y)):
                             marked = load_marked_dates("default-data.json")
-                            deploy_status = "Loaded default-data.json"
-                            deploy_status_color = dark_gray
+                            matrix_status = "Loaded default-data.json"
+                            matrix_status_color = green
                             drag_left_active = False
                             drag_right_active = False
                             drag_last_cell = None
                         elif exit_button_rect.collidepoint((x, y)):
                             save_marked_dates(marked, year, applied_file)
+                            matrix_status = "Exiting..."
+                            matrix_status_color = dark_gray
                             running = False
                         elif settings_button_rect.collidepoint((x, y)):
                             save_marked_dates(marked, year, applied_file)
+                            matrix_status = "Opening settings..."
+                            matrix_status_color = dark_gray
                             state = STATE_SETTINGS
                             pygame.key.start_text_input()
                             year_text = str(year)
@@ -677,20 +685,13 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             exit_text_rect = exit_text.get_rect(center=exit_button_rect.center)
             screen.blit(exit_text, exit_text_rect)
 
-            if deploy_status:
-                status_surface = small_font.render(deploy_status[:72], True, deploy_status_color)
-                status_rect = status_surface.get_rect(center=(screen_width // 2, screen_height - 28))
+            if matrix_status:
+                status_box_rect = pygame.Rect(screen_width // 2 - 240, screen_height - 86, 480, 38)
+                pygame.draw.rect(screen, black, status_box_rect)
+                pygame.draw.rect(screen, gray, status_box_rect, 1)
+                status_surface = small_font.render(matrix_status[:80], True, matrix_status_color)
+                status_rect = status_surface.get_rect(midleft=(status_box_rect.x + 10, status_box_rect.centery))
                 screen.blit(status_surface, status_rect)
-
-            if push_status:
-                push_surface = small_font.render(push_status[:72], True, push_status_color)
-                push_rect = push_surface.get_rect(center=(screen_width // 2, screen_height - 40))
-                screen.blit(push_surface, push_rect)
-
-            if archive_status:
-                archive_surface = small_font.render(archive_status[:72], True, archive_status_color)
-                archive_rect = archive_surface.get_rect(center=(screen_width // 2, screen_height - 52))
-                screen.blit(archive_surface, archive_rect)
             
             instructions = small_font.render("Left drag:+level | Right drag:erase | Scroll on year number to change year", True, dark_gray)
             instructions_rect = instructions.get_rect(center=(screen_width // 2, screen_height - 12))
