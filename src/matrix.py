@@ -691,7 +691,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 elif event.type == pygame.MOUSEWHEEL:
                     if settings_panel_open:
                         continue
-                    if year_scroll_rect.collidepoint(pygame.mouse.get_pos()) and event.y != 0:
+                    if event.y != 0:
                         save_marked_dates(marked, year, applied_file)
                         if event.y > 0:
                             year = min(9999, year + 1)
@@ -1075,7 +1075,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             if not settings_panel_open:
                 _draw_matrix_status_box()
             
-            instructions = small_font.render("Left click/drag to draw | Right click/drag to erase | Scroll over year to change", True, tip_green)
+            instructions = small_font.render("Left click/drag to draw | Right click/drag to erase | Scroll to change year", True, tip_green)
             instructions_rect = instructions.get_rect(center=(screen_width // 2, screen_height - 12))
             screen.blit(instructions, instructions_rect)
         
