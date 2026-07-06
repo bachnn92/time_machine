@@ -17,7 +17,7 @@ def _slugify(value: str) -> str:
 
 
 def _build_repo_path(workspace_root: Path, year: int, data_file: str) -> Path:
-    repo_root = workspace_root / "mock-repos"
+    repo_root = workspace_root / " workspace"
     repo_root.mkdir(exist_ok=True)
     stem = Path(data_file).stem or "data"
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
