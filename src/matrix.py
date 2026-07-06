@@ -45,6 +45,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     # Fonts
     font = pygame.font.SysFont('monospace', 16)
     small_font = pygame.font.SysFont('monospace', 12)
+    year_font = pygame.font.SysFont('monospace', 22)
     
     # State machine
     STATE_SETTINGS = 0
@@ -112,7 +113,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     # Matrix state variables
     matrix = None
     marked: dict[tuple[int, int], int] = {}
-    cell_size = 12
+    cell_size = 14
     label_width = 40
     label_height = 20
     button_height = 28
@@ -849,6 +850,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             matrix_height = label_height + grid_height
             matrix_x = max((screen_width - matrix_width) // 2, 0)
             matrix_y = max((screen_height - matrix_height) // 3, 0)
+            matrix_center_x = matrix_x + matrix_width // 2
             grid_x = matrix_x + label_width
             grid_y = matrix_y + label_height
             
@@ -873,11 +875,11 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             
             # Title and instructions
             title = font.render("Time Machine - Matrix", True, green)
-            title_rect = title.get_rect(center=(screen_width // 2, 15))
+            title_rect = title.get_rect(center=(matrix_center_x, 15))
             screen.blit(title, title_rect)
 
-            year_value = font.render(str(year), True, green)
-            year_value_rect = year_value.get_rect(center=(screen_width // 2, 36))
+            year_value = year_font.render(str(year), True, green)
+            year_value_rect = year_value.get_rect(center=(matrix_center_x, 36))
             screen.blit(year_value, year_value_rect)
             year_scroll_rect = year_value_rect.inflate(16, 8)
 
