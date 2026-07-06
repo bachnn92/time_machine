@@ -111,18 +111,25 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     label_height = 20
     button_width = 120
     button_height = 28
-    button_gap = 8
-    button_x = 12
-    bottom_margin = 46
-    new_button_y = screen_height - (button_height * 8 + button_gap * 7 + bottom_margin)
-    new_button_rect = pygame.Rect(button_x, new_button_y, button_width, button_height)
-    save_button_rect = pygame.Rect(button_x, new_button_y + button_height + button_gap, button_width, button_height)
-    push_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 2, button_width, button_height)
-    deploy_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 3, button_width, button_height)
-    archive_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 4, button_width, button_height)
-    default_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 5, button_width, button_height)
-    settings_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 6, button_width, button_height)
-    exit_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 7, button_width, button_height)
+    button_gap = 24
+    button_width = 100
+    row1_count = 6
+    row1_total_width = row1_count * button_width + (row1_count - 1) * button_gap
+    row1_x = (screen_width - row1_total_width) // 2
+    row1_y = screen_height - 156
+    row2_y = row1_y + button_height + 18
+    row2_total_width = button_width * 2 + button_gap
+    row2_x = (screen_width - row2_total_width) // 2
+
+    default_button_rect = pygame.Rect(row1_x, row1_y, button_width, button_height)
+    new_button_rect = pygame.Rect(row1_x + (button_width + button_gap), row1_y, button_width, button_height)
+    save_button_rect = pygame.Rect(row1_x + (button_width + button_gap) * 2, row1_y, button_width, button_height)
+    deploy_button_rect = pygame.Rect(row1_x + (button_width + button_gap) * 3, row1_y, button_width, button_height)
+    archive_button_rect = pygame.Rect(row1_x + (button_width + button_gap) * 4, row1_y, button_width, button_height)
+    push_button_rect = pygame.Rect(row1_x + (button_width + button_gap) * 5, row1_y, button_width, button_height)
+
+    settings_button_rect = pygame.Rect(row2_x, row2_y, button_width, button_height)
+    exit_button_rect = pygame.Rect(row2_x + button_width + button_gap, row2_y, button_width, button_height)
     level_colors = [
         (20, 20, 20),
         (0, 70, 0),
@@ -676,7 +683,12 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             screen.blit(year_value, year_value_rect)
             year_scroll_rect = year_value_rect.inflate(16, 8)
 
-            # Settings button
+            default_button_color = green if default_button_rect.collidepoint(pygame.mouse.get_pos()) else white
+            pygame.draw.rect(screen, default_button_color, default_button_rect, 2)
+            default_text = small_font.render("DEFAULT", True, default_button_color)
+            default_text_rect = default_text.get_rect(center=default_button_rect.center)
+            screen.blit(default_text, default_text_rect)
+
             new_button_color = green if new_button_rect.collidepoint(pygame.mouse.get_pos()) else white
             pygame.draw.rect(screen, new_button_color, new_button_rect, 2)
             new_text = small_font.render("NEW", True, new_button_color)
@@ -688,12 +700,6 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             save_text = small_font.render("SAVE", True, save_button_color)
             save_text_rect = save_text.get_rect(center=save_button_rect.center)
             screen.blit(save_text, save_text_rect)
-
-            push_button_color = green if push_button_rect.collidepoint(pygame.mouse.get_pos()) else white
-            pygame.draw.rect(screen, push_button_color, push_button_rect, 2)
-            push_text = small_font.render("PUSH", True, push_button_color)
-            push_text_rect = push_text.get_rect(center=push_button_rect.center)
-            screen.blit(push_text, push_text_rect)
 
             deploy_button_color = green if deploy_button_rect.collidepoint(pygame.mouse.get_pos()) else white
             pygame.draw.rect(screen, deploy_button_color, deploy_button_rect, 2)
@@ -707,11 +713,11 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             archive_text_rect = archive_text.get_rect(center=archive_button_rect.center)
             screen.blit(archive_text, archive_text_rect)
 
-            default_button_color = green if default_button_rect.collidepoint(pygame.mouse.get_pos()) else white
-            pygame.draw.rect(screen, default_button_color, default_button_rect, 2)
-            default_text = small_font.render("DEFAULT", True, default_button_color)
-            default_text_rect = default_text.get_rect(center=default_button_rect.center)
-            screen.blit(default_text, default_text_rect)
+            push_button_color = green if push_button_rect.collidepoint(pygame.mouse.get_pos()) else white
+            pygame.draw.rect(screen, push_button_color, push_button_rect, 2)
+            push_text = small_font.render("PUSH", True, push_button_color)
+            push_text_rect = push_text.get_rect(center=push_button_rect.center)
+            screen.blit(push_text, push_text_rect)
 
             settings_button_color = green if settings_button_rect.collidepoint(pygame.mouse.get_pos()) else white
             pygame.draw.rect(screen, settings_button_color, settings_button_rect, 2)
@@ -724,6 +730,25 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             exit_text = small_font.render("EXIT", True, exit_button_color)
             exit_text_rect = exit_text.get_rect(center=exit_button_rect.center)
             screen.blit(exit_text, exit_text_rect)
+
+            # Arrow separators between horizontal button groups.
+            arrow_color = gray
+            row1_buttons = [
+                default_button_rect,
+                new_button_rect,
+                save_button_rect,
+                deploy_button_rect,
+                archive_button_rect,
+                push_button_rect,
+            ]
+            for left_rect, right_rect in zip(row1_buttons, row1_buttons[1:]):
+                arrow_text = small_font.render("->", True, arrow_color)
+                arrow_rect = arrow_text.get_rect(center=((left_rect.right + right_rect.left) // 2, left_rect.centery))
+                screen.blit(arrow_text, arrow_rect)
+
+            row2_arrow = small_font.render("->", True, arrow_color)
+            row2_arrow_rect = row2_arrow.get_rect(center=((settings_button_rect.right + exit_button_rect.left) // 2, settings_button_rect.centery))
+            screen.blit(row2_arrow, row2_arrow_rect)
 
             _draw_matrix_status_box()
             
