@@ -82,7 +82,7 @@ def deploy_mock_repo(
     user_email = profile.get("email", "").strip()
     debug_mode = bool(profile.get("debug", False))
     if not user_name or not user_email:
-        raise ValueError("Missing git user or email in schema/configs.json")
+        raise ValueError("Missing git user or email in schema/settings.json")
 
     save_marked_dates(marked, year, data_file)
     schedule = load_commit_schedule(data_file)
@@ -152,7 +152,7 @@ def push_workspace_repo(workspace_root: str | os.PathLike[str] | None = None) ->
     token = profile.get("token", "").strip()
     force_push = bool(profile.get("force_push", False))
     if not remote_url:
-        raise ValueError("Missing remote URL in schema/configs.json")
+        raise ValueError("Missing remote URL in schema/settings.json")
 
     root = Path(workspace_root or os.getcwd())
     repo_path = _build_repo_path(root, 0, "data.json")
@@ -198,7 +198,7 @@ def archive_workspace_repo(workspace_root: str | os.PathLike[str] | None = None)
     if archive_path.exists():
         archive_path.unlink()
 
-    extra_files = [root / "schema" / "data.json", root / "schema" / "configs.json"]
+    extra_files = [root / "schema" / "data.json", root / "schema" / "settings.json"]
     with zipfile.ZipFile(archive_path, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
         for path in repo_path.rglob("*"):
             if path.is_file():

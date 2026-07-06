@@ -146,7 +146,7 @@ def save_marked_dates(marked: dict[tuple[int, int], int], year: int, filename: s
         json.dump(dates, f)
 
 
-def load_git_profile(filename: str = "configs.json") -> dict:
+def load_git_profile(filename: str = "settings.json") -> dict:
     """Loads git profile and app settings from JSON file.
     
     Args:
@@ -156,6 +156,11 @@ def load_git_profile(filename: str = "configs.json") -> dict:
         Dictionary with user/profile values and settings fields
     """
     filepath = _get_filepath(filename)
+    # Backward compatibility: transparently read legacy configs.json.
+    if filename == "settings.json" and not os.path.exists(filepath):
+        legacy_filepath = _get_filepath("configs.json")
+        if os.path.exists(legacy_filepath):
+            filepath = legacy_filepath
     defaults = _default_git_profile()
     if not os.path.exists(filepath):
         return defaults
@@ -164,7 +169,7 @@ def load_git_profile(filename: str = "configs.json") -> dict:
             data = json.load(f)
 
         profile_data = data.get("profile", data)
-        settings_data = data.get("settings", data)
+        settings_data = data.get("cofiguration", data.get("settings", data))
 
         year_value = settings_data.get("year", 2026)
         path_value = settings_data.get("path", "data.json")
@@ -207,7 +212,7 @@ def save_git_profile(
     force_push: bool = False,
     debug: bool = False,
     random: bool = False,
-    filename: str = "configs.json",
+    filename: str = "settings.json",
 ) -> None:
     """Saves git profile and app settings to JSON file.
     
@@ -226,7 +231,7 @@ def save_git_profile(
             "token": token.strip(),
             "url": url.strip() if isinstance(url, str) and url.strip() else "",
         },
-        "settings": {
+        "cofiguration": {
             "year": int(year),
             "path": path.strip() if isinstance(path, str) and path.strip() else "data.json",
             "force_push": bool(force_push),

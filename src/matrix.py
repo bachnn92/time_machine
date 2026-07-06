@@ -765,7 +765,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             screen.blit(title, title_rect)
 
             pygame.draw.rect(screen, gray, app_settings_rect, 1)
-            app_settings_title = small_font.render("App Setting", True, green)
+            app_settings_title = small_font.render("Configuration", True, green)
             screen.blit(app_settings_title, (app_settings_rect.x + 8, app_settings_rect.y + 6))
 
             pygame.draw.rect(screen, gray, profile_rect, 1)
@@ -998,7 +998,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 screen.blit(panel_title, (settings_panel_x + 18, settings_panel_y + 12))
 
                 pygame.draw.rect(screen, gray, app_settings_rect, 1)
-                app_settings_title = small_font.render("App Setting", True, green)
+                app_settings_title = small_font.render("Configuration", True, green)
                 screen.blit(app_settings_title, (app_settings_rect.x + 8, app_settings_rect.y + 6))
 
                 pygame.draw.rect(screen, gray, profile_rect, 1)
