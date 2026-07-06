@@ -3,7 +3,7 @@
 
 from .module.data_persistence import (
     load_marked_dates, save_marked_dates,
-    load_git_profile, save_git_profile
+    load_git_config_profile, load_git_profile, save_git_profile
 )
 from .module.matrix_logic import generate_commit_matrix
 from .module.visualization import plot_matrix
@@ -25,6 +25,7 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
         return
     
     pygame.init()
+    pygame.key.set_repeat(350, 40)
     
     # Screen setup
     screen_width, screen_height = 760, 420
@@ -64,7 +65,7 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
     year = applied_year
     year_text = str(applied_year)
     file_text = applied_file
-    username_text = git_profile.get("username", "")
+    user_text = git_profile.get("user", git_profile.get("username", ""))
     email_text = git_profile.get("email", "")
     token_text = git_profile.get("token", "")
     active_field = None
@@ -79,7 +80,7 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
     profile_rect = pygame.Rect(settings_panel_x + 20, settings_panel_y + 180, settings_panel_width - 40, 155)
     year_field_rect = pygame.Rect(field_x, settings_panel_y + 78, 350, 30)
     file_field_rect = pygame.Rect(field_x, settings_panel_y + 118, 350, 30)
-    username_field_rect = pygame.Rect(field_x, settings_panel_y + 213, 350, 30)
+    user_field_rect = pygame.Rect(field_x, settings_panel_y + 213, 350, 30)
     email_field_rect = pygame.Rect(field_x, settings_panel_y + 253, 350, 30)
     token_field_rect = pygame.Rect(field_x, settings_panel_y + 293, 350, 30)
     default_settings_button_rect = pygame.Rect(settings_panel_x + 20, settings_panel_y + 345, 160, 40)
@@ -97,11 +98,12 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
     button_gap = 8
     button_x = screen_width - button_width - 12
     bottom_margin = 46
-    new_button_y = screen_height - (button_height * 4 + button_gap * 3 + bottom_margin)
+    new_button_y = screen_height - (button_height * 5 + button_gap * 4 + bottom_margin)
     new_button_rect = pygame.Rect(button_x, new_button_y, button_width, button_height)
-    default_button_rect = pygame.Rect(button_x, new_button_y + button_height + button_gap, button_width, button_height)
-    settings_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 2, button_width, button_height)
-    exit_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 3, button_width, button_height)
+    save_button_rect = pygame.Rect(button_x, new_button_y + button_height + button_gap, button_width, button_height)
+    default_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 2, button_width, button_height)
+    settings_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 3, button_width, button_height)
+    exit_button_rect = pygame.Rect(button_x, new_button_y + (button_height + button_gap) * 4, button_width, button_height)
     level_colors = [
         (20, 20, 20),
         (0, 70, 0),
@@ -119,6 +121,48 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
     matrix = generate_commit_matrix(year)
     marked = load_marked_dates(applied_file)
 
+    def _set_active_field_value(value: str) -> None:
+        nonlocal year_text, file_text, user_text, email_text, token_text
+        if active_field == 0:
+            year_text = "".join(ch for ch in value if ch.isdigit())[:4]
+        elif active_field == 1:
+            file_text = value[:100]
+        elif active_field == 2:
+            user_text = value[:50]
+        elif active_field == 3:
+            email_text = value[:100]
+        elif active_field == 4:
+            token_text = value[:120]
+
+    def _get_active_field_value() -> str:
+        if active_field == 0:
+            return year_text
+        if active_field == 1:
+            return file_text
+        if active_field == 2:
+            return user_text
+        if active_field == 3:
+            return email_text
+        if active_field == 4:
+            return token_text
+        return ""
+
+    def _load_profile_fields() -> tuple[str, str, str]:
+        current_profile = load_git_profile()
+        return (
+            current_profile.get("user", current_profile.get("username", "")),
+            current_profile.get("email", ""),
+            current_profile.get("token", ""),
+        )
+
+    def _load_default_profile_fields() -> tuple[str, str, str]:
+        git_config_profile = load_git_config_profile()
+        return (
+            git_config_profile.get("user", ""),
+            git_config_profile.get("email", ""),
+            "",
+        )
+
     clock = pygame.time.Clock()
     running = True
     
@@ -135,13 +179,14 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                             active_field = 0
                         elif file_field_rect.collidepoint(pos):
                             active_field = 1
-                        elif username_field_rect.collidepoint(pos):
+                        elif user_field_rect.collidepoint(pos):
                             active_field = 2
                         elif email_field_rect.collidepoint(pos):
                             active_field = 3
                         elif token_field_rect.collidepoint(pos):
                             active_field = 4
                         elif default_settings_button_rect.collidepoint(pos):
+                            user_text, email_text, token_text = _load_default_profile_fields()
                             year_text = str(default_year)
                             file_text = default_path
                         elif apply_button_rect.collidepoint(pos):
@@ -152,7 +197,7 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                                 file_text = applied_file
                                 # Save git profile
                                 save_git_profile(
-                                    username_text,
+                                    user_text,
                                     email_text,
                                     token_text,
                                     year=applied_year,
@@ -169,13 +214,24 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                             year_text = str(applied_year)
                             file_text = applied_file
                             git_profile = load_git_profile()
-                            username_text = git_profile.get("username", "")
+                            user_text = git_profile.get("user", git_profile.get("username", ""))
                             email_text = git_profile.get("email", "")
                             token_text = git_profile.get("token", "")
+                            active_field = None
                             state = STATE_MATRIX
                 
                 elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_TAB:
+                    if event.key == pygame.K_ESCAPE:
+                        # Close settings without saving any pending edits.
+                        year_text = str(applied_year)
+                        file_text = applied_file
+                        git_profile = load_git_profile()
+                        user_text = git_profile.get("user", git_profile.get("username", ""))
+                        email_text = git_profile.get("email", "")
+                        token_text = git_profile.get("token", "")
+                        active_field = None
+                        state = STATE_MATRIX
+                    elif event.key == pygame.K_TAB:
                         active_field = (active_field + 1) % 5 if active_field is not None else 0
                     elif event.key == pygame.K_RETURN and active_field is not None:
                         try:
@@ -184,7 +240,7 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                             year = applied_year
                             file_text = applied_file
                             save_git_profile(
-                                username_text,
+                                user_text,
                                 email_text,
                                 token_text,
                                 year=applied_year,
@@ -195,36 +251,11 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                             state = STATE_MATRIX
                         except ValueError:
                             year_text = str(applied_year)
-                    elif active_field == 0:
-                        if event.key == pygame.K_BACKSPACE:
-                            year_text = year_text[:-1] if year_text else year_text
-                        elif event.unicode.isdigit():
-                            if len(year_text) < 4:
-                                year_text += event.unicode
-                    elif active_field == 1:
-                        if event.key == pygame.K_BACKSPACE:
-                            file_text = file_text[:-1] if file_text else file_text
-                        elif event.unicode.isprintable():
-                            if len(file_text) < 100:
-                                file_text += event.unicode
-                    elif active_field == 2:
-                        if event.key == pygame.K_BACKSPACE:
-                            username_text = username_text[:-1] if username_text else username_text
-                        elif event.unicode.isprintable():
-                            if len(username_text) < 50:
-                                username_text += event.unicode
-                    elif active_field == 3:
-                        if event.key == pygame.K_BACKSPACE:
-                            email_text = email_text[:-1] if email_text else email_text
-                        elif event.unicode.isprintable():
-                            if len(email_text) < 100:
-                                email_text += event.unicode
-                    elif active_field == 4:
-                        if event.key == pygame.K_BACKSPACE:
-                            token_text = token_text[:-1] if token_text else token_text
-                        elif event.unicode.isprintable():
-                            if len(token_text) < 120:
-                                token_text += event.unicode
+                    elif event.key == pygame.K_BACKSPACE and active_field is not None:
+                        _set_active_field_value(_get_active_field_value()[:-1])
+                elif event.type == pygame.TEXTINPUT and active_field is not None:
+                    if event.text and event.text.isprintable():
+                        _set_active_field_value(_get_active_field_value() + event.text)
             
             elif state == STATE_MATRIX:
                 grid_width = 52 * cell_size
@@ -245,6 +276,11 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                             drag_left_active = False
                             drag_right_active = False
                             drag_last_cell = None
+                        elif save_button_rect.collidepoint((x, y)):
+                            save_marked_dates(marked, year, applied_file)
+                            drag_left_active = False
+                            drag_right_active = False
+                            drag_last_cell = None
                         elif default_button_rect.collidepoint((x, y)):
                             marked = load_marked_dates("default-data.json")
                             drag_left_active = False
@@ -259,7 +295,7 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                             year_text = str(year)
                             file_text = applied_file
                             git_profile = load_git_profile()
-                            username_text = git_profile.get("username", "")
+                            user_text = git_profile.get("user", git_profile.get("username", ""))
                             email_text = git_profile.get("email", "")
                             token_text = git_profile.get("token", "")
                             active_field = None
@@ -325,7 +361,7 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                         year_text = str(applied_year)
                         file_text = applied_file
                         git_profile = load_git_profile()
-                        username_text = git_profile.get("username", "")
+                        user_text = git_profile.get("user", git_profile.get("username", ""))
                         email_text = git_profile.get("email", "")
                         token_text = git_profile.get("token", "")
                         active_field = None
@@ -363,12 +399,12 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
             file_display = small_font.render(file_text[-30:], True, white)
             screen.blit(file_display, (file_field_rect.x + 10, file_field_rect.y + 13))
             
-            username_label = small_font.render("Username:", True, white)
-            screen.blit(username_label, (label_x - 20, username_field_rect.y + 13))
-            username_field_color = green if active_field == 2 else gray
-            pygame.draw.rect(screen, username_field_color, username_field_rect, 2)
-            username_display = small_font.render(username_text[-30:] if username_text else "", True, white)
-            screen.blit(username_display, (username_field_rect.x + 10, username_field_rect.y + 13))
+            user_label = small_font.render("User:", True, white)
+            screen.blit(user_label, (label_x + 10, user_field_rect.y + 13))
+            user_field_color = green if active_field == 2 else gray
+            pygame.draw.rect(screen, user_field_color, user_field_rect, 2)
+            user_display = small_font.render(user_text[-30:] if user_text else "", True, white)
+            screen.blit(user_display, (user_field_rect.x + 10, user_field_rect.y + 13))
             
             email_label = small_font.render("Email:", True, white)
             screen.blit(email_label, (label_x + 5, email_field_rect.y + 13))
@@ -406,7 +442,7 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
             close_rect = close_text.get_rect(center=close_button_rect.center)
             screen.blit(close_text, close_rect)
             
-            instructions = small_font.render("DEFAULT restores year/path | Enter to apply", True, dark_gray)
+            instructions = small_font.render("DEFAULT restores year/path and git profile | Enter to apply", True, dark_gray)
             instructions_rect = instructions.get_rect(center=(screen_width // 2, screen_height - 12))
             screen.blit(instructions, instructions_rect)
         
@@ -456,6 +492,12 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
             new_text = small_font.render("NEW", True, new_button_color)
             new_text_rect = new_text.get_rect(center=new_button_rect.center)
             screen.blit(new_text, new_text_rect)
+
+            save_button_color = green if save_button_rect.collidepoint(pygame.mouse.get_pos()) else white
+            pygame.draw.rect(screen, save_button_color, save_button_rect, 2)
+            save_text = small_font.render("SAVE", True, save_button_color)
+            save_text_rect = save_text.get_rect(center=save_button_rect.center)
+            screen.blit(save_text, save_text_rect)
 
             default_button_color = green if default_button_rect.collidepoint(pygame.mouse.get_pos()) else white
             pygame.draw.rect(screen, default_button_color, default_button_rect, 2)

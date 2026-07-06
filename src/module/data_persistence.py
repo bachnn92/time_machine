@@ -2,6 +2,7 @@
 
 import json
 import os
+import subprocess
 from datetime import datetime
 
 from .daytime import day_of_week_index
@@ -16,6 +17,45 @@ def _get_filepath(filename: str) -> str:
     if "/" in filename:
         return filename
     return f"schema/{filename}"
+
+
+def _load_git_config_defaults() -> dict[str, str]:
+    """Read git user defaults from the current environment, if available."""
+
+    def _read_git_value(key: str) -> str:
+        try:
+            result = subprocess.run(
+                ["git", "config", "--get", key],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+        except OSError:
+            return ""
+        if result.returncode != 0:
+            return ""
+        return result.stdout.strip()
+
+    return {
+        "user": _read_git_value("user.name"),
+        "email": _read_git_value("user.email"),
+    }
+
+
+def _default_git_profile() -> dict:
+    git_defaults = _load_git_config_defaults()
+    return {
+        "user": git_defaults["user"],
+        "email": git_defaults["email"],
+        "token": "",
+        "year": 2026,
+        "path": "data.json",
+    }
+
+
+def load_git_config_profile() -> dict[str, str]:
+    """Load git identity directly from local git config."""
+    return _load_git_config_defaults()
 
 
 def load_marked_dates(filename: str = "data.json") -> dict[tuple[int, int], int]:
@@ -101,17 +141,12 @@ def load_git_profile(filename: str = "configs.json") -> dict:
         filename: Simple filename (stored in schema/) or full path (used as-is)
     
     Returns:
-        Dictionary with 'username', 'email', 'token', 'year', and 'path' keys
+        Dictionary with 'user', 'email', 'token', 'year', and 'path' keys
     """
     filepath = _get_filepath(filename)
+    defaults = _default_git_profile()
     if not os.path.exists(filepath):
-        return {
-            "username": "",
-            "email": "",
-            "token": "",
-            "year": 2026,
-            "path": "data.json",
-        }
+        return defaults
     try:
         with open(filepath, 'r') as f:
             data = json.load(f)
@@ -124,28 +159,24 @@ def load_git_profile(filename: str = "configs.json") -> dict:
         try:
             year_value = int(year_value)
         except (TypeError, ValueError):
-            year_value = 2026
+            year_value = defaults["year"]
         if not isinstance(path_value, str) or not path_value.strip():
-            path_value = "data.json"
+            path_value = defaults["path"]
+        user_value = profile_data.get("user", profile_data.get("username", ""))
+        email_value = profile_data.get("email", "")
         return {
-            "username": profile_data.get("username", ""),
-            "email": profile_data.get("email", ""),
+            "user": user_value.strip() if isinstance(user_value, str) and user_value.strip() else defaults["user"],
+            "email": email_value.strip() if isinstance(email_value, str) and email_value.strip() else defaults["email"],
             "token": profile_data.get("token", ""),
             "year": year_value,
             "path": path_value,
         }
     except:
-        return {
-            "username": "",
-            "email": "",
-            "token": "",
-            "year": 2026,
-            "path": "data.json",
-        }
+        return defaults
 
 
 def save_git_profile(
-    username: str,
+    user: str,
     email: str,
     token: str = "",
     year: int = 2026,
@@ -155,7 +186,7 @@ def save_git_profile(
     """Saves git profile and app settings to JSON file.
     
     Args:
-        username: Git username
+        user: Git user name
         email: Git email address
         token: Git access token
         year: Selected matrix year
@@ -164,7 +195,7 @@ def save_git_profile(
     """
     profile = {
         "profile": {
-            "username": username.strip(),
+            "user": user.strip(),
             "email": email.strip(),
             "token": token.strip(),
         },
