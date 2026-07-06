@@ -22,6 +22,8 @@ def generate_commit_matrix(year: int) -> list[list[int]]:
         day_of_week = day_of_week_index(current.year, current.month, current.day)
         # Get week of year (1-53), but cap at 52
         week = min(current.isocalendar()[1] - 1, 51)  # 0-based, max 51
+        if day_of_week == 0:
+            week = min(week + 1, 51)
         
         # Determine commit count based on day
         if day_of_week in [0, 6]:  # Weekend: Sun and Sat
@@ -54,6 +56,8 @@ def generate_random_marked_dates(
     while current <= range_end:
         day_of_week = day_of_week_index(current.year, current.month, current.day)
         week = min(current.isocalendar()[1] - 1, 51)
+        if day_of_week == 0:
+            week = min(week + 1, 51)
         rate = 0.2 if day_of_week in [0, 6] else 0.8
 
         if random_binary(rate):

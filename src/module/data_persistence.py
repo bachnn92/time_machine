@@ -108,6 +108,8 @@ def load_marked_dates(filename: str = "data.json") -> dict[tuple[int, int], int]
         for dt, level in load_commit_schedule(filename):
             week = min(dt.isocalendar()[1] - 1, 51)
             day = day_of_week_index(dt.year, dt.month, dt.day)
+            if day == 0:
+                week = min(week + 1, 51)
             marked[(week, day)] = level
 
         return marked
@@ -128,10 +130,11 @@ def save_marked_dates(marked: dict[tuple[int, int], int], year: int, filename: s
         level = _clamp_level(level)
         if level <= 0:
             continue
-        # Convert to date: day_of_week 0=Sun, isocalendar day 1=Mon, 7=Sun
+        # Grid uses Sunday-start weeks; convert to ISO weeks for storage.
         iso_day = 7 if day == 0 else day
+        iso_week = week if day == 0 else week + 1
         try:
-            dt = datetime.fromisocalendar(year, week + 1, iso_day)
+            dt = datetime.fromisocalendar(year, iso_week, iso_day)
             dates.append({"date": dt.isoformat(), "level": level})
         except:
             pass
