@@ -99,10 +99,9 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     url_field_rect = pygame.Rect(field_x, settings_panel_y + 146, field_width, 30)
     token_field_rect = pygame.Rect(field_x, settings_panel_y + 180, field_width, 30)
     year_field_rect = pygame.Rect(field_x, settings_panel_y + 258, field_width, 30)
-    file_field_rect = pygame.Rect(field_x, settings_panel_y + 292, field_width, 30)
-    force_push_rect = pygame.Rect(field_x, settings_panel_y + 326, 24, 24)
-    debug_rect = pygame.Rect(field_x, settings_panel_y + 360, 24, 24)
-    random_rect = pygame.Rect(field_x, settings_panel_y + 394, 24, 24)
+    force_push_rect = pygame.Rect(field_x, settings_panel_y + 292, 24, 24)
+    debug_rect = pygame.Rect(field_x, settings_panel_y + 326, 24, 24)
+    random_rect = pygame.Rect(field_x, settings_panel_y + 360, 24, 24)
     settings_button_row_width = settings_button_width * 3 + 20 * 2
     settings_button_row_x = settings_panel_x + settings_panel_width - 20 - settings_button_row_width
     settings_button_row_y = settings_panel_y + settings_panel_height - 64
@@ -179,32 +178,28 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     marked = load_marked_dates(applied_file)
 
     def _set_active_field_value(value: str) -> None:
-        nonlocal year_text, file_text, url_text, user_text, email_text, token_text
+        nonlocal year_text, url_text, user_text, email_text, token_text
         if active_field == 0:
             year_text = "".join(ch for ch in value if ch.isdigit())[:4]
         elif active_field == 1:
-            file_text = value[:100]
-        elif active_field == 2:
             url_text = value[:200]
-        elif active_field == 3:
+        elif active_field == 2:
             user_text = value[:50]
-        elif active_field == 4:
+        elif active_field == 3:
             email_text = value[:100]
-        elif active_field == 5:
+        elif active_field == 4:
             token_text = value[:120]
 
     def _get_active_field_value() -> str:
         if active_field == 0:
             return year_text
         if active_field == 1:
-            return file_text
-        if active_field == 2:
             return url_text
-        if active_field == 3:
+        if active_field == 2:
             return user_text
-        if active_field == 4:
+        if active_field == 3:
             return email_text
-        if active_field == 5:
+        if active_field == 4:
             return token_text
         return ""
 
@@ -300,19 +295,17 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         pygame.key.stop_text_input()
 
     def _apply_settings_panel() -> bool:
-        nonlocal applied_year, applied_file, applied_url
+        nonlocal applied_year, applied_url
         nonlocal applied_force_push, applied_debug, applied_random
-        nonlocal year, year_text, file_text, matrix, marked, settings_panel_open
+        nonlocal year, year_text, matrix, marked, settings_panel_open
         nonlocal matrix_status, matrix_status_color
         try:
             applied_year = int(year_text)
-            applied_file = file_text.strip() if file_text.strip() else default_path
             applied_url = url_text.strip()
             applied_force_push = force_push_enabled
             applied_debug = debug_enabled
             applied_random = random_enabled
             year = applied_year
-            file_text = applied_file
             save_git_profile(
                 user_text,
                 email_text,
@@ -352,8 +345,6 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         pos = event.pos
                         if year_field_rect.collidepoint(pos):
                             active_field = 0
-                        elif file_field_rect.collidepoint(pos):
-                            active_field = 1
                         elif force_push_rect.collidepoint(pos):
                             force_push_enabled = not force_push_enabled
                             active_field = None
@@ -364,13 +355,13 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             random_enabled = not random_enabled
                             active_field = None
                         elif url_field_rect.collidepoint(pos):
-                            active_field = 2
+                            active_field = 1
                         elif user_field_rect.collidepoint(pos):
-                            active_field = 3
+                            active_field = 2
                         elif email_field_rect.collidepoint(pos):
-                            active_field = 4
+                            active_field = 3
                         elif token_field_rect.collidepoint(pos):
-                            active_field = 5
+                            active_field = 4
                         elif default_settings_button_rect.collidepoint(pos):
                             default_user_text, default_email_text, default_url_text, default_token_text = _load_default_profile_fields()
                             if default_user_text:
@@ -382,20 +373,17 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             if default_token_text:
                                 token_text = default_token_text
                             year_text = str(default_year)
-                            file_text = default_path
                             force_push_enabled = False
                             debug_enabled = False
                             random_enabled = False
                         elif apply_button_rect.collidepoint(pos):
                             try:
                                 applied_year = int(year_text)
-                                applied_file = file_text.strip() if file_text.strip() else default_path
                                 applied_url = url_text.strip()
                                 applied_force_push = force_push_enabled
                                 applied_debug = debug_enabled
                                 applied_random = random_enabled
                                 year = applied_year
-                                file_text = applied_file
                                 # Save git profile
                                 save_git_profile(
                                     user_text,
@@ -455,17 +443,15 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         pygame.key.stop_text_input()
                         state = STATE_MATRIX
                     elif event.key == pygame.K_TAB:
-                        active_field = (active_field + 1) % 6 if active_field is not None else 0
+                        active_field = (active_field + 1) % 5 if active_field is not None else 0
                     elif event.key == pygame.K_RETURN and active_field is not None:
                         try:
                             applied_year = int(year_text)
-                            applied_file = file_text.strip() if file_text.strip() else default_path
                             applied_url = url_text.strip()
                             applied_force_push = force_push_enabled
                             applied_debug = debug_enabled
                             applied_random = random_enabled
                             year = applied_year
-                            file_text = applied_file
                             save_git_profile(
                                 user_text,
                                 email_text,
@@ -510,8 +496,6 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             pos = event.pos
                             if year_field_rect.collidepoint(pos):
                                 active_field = 0
-                            elif file_field_rect.collidepoint(pos):
-                                active_field = 1
                             elif force_push_rect.collidepoint(pos):
                                 force_push_enabled = not force_push_enabled
                                 active_field = None
@@ -522,13 +506,13 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 random_enabled = not random_enabled
                                 active_field = None
                             elif url_field_rect.collidepoint(pos):
-                                active_field = 2
+                                active_field = 1
                             elif user_field_rect.collidepoint(pos):
-                                active_field = 3
+                                active_field = 2
                             elif email_field_rect.collidepoint(pos):
-                                active_field = 4
+                                active_field = 3
                             elif token_field_rect.collidepoint(pos):
-                                active_field = 5
+                                active_field = 4
                             elif default_settings_button_rect.collidepoint(pos):
                                 default_user_text, default_email_text, default_url_text, default_token_text = _load_default_profile_fields()
                                 if default_user_text:
@@ -540,7 +524,6 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 if default_token_text:
                                     token_text = default_token_text
                                 year_text = str(default_year)
-                                file_text = default_path
                                 force_push_enabled = False
                                 debug_enabled = False
                                 random_enabled = False
@@ -738,7 +721,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             matrix_status = "Settings canceled"
                             matrix_status_color = dark_gray
                         elif event.key == pygame.K_TAB:
-                            active_field = (active_field + 1) % 6 if active_field is not None else 0
+                            active_field = (active_field + 1) % 5 if active_field is not None else 0
                         elif event.key == pygame.K_RETURN and active_field is not None:
                             _apply_settings_panel()
                         elif event.key == pygame.K_BACKSPACE and active_field is not None:
@@ -775,21 +758,21 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             
             user_label = small_font.render("User:", True, white)
             screen.blit(user_label, (profile_label_x, user_field_rect.y + 13))
-            user_field_color = green if active_field == 3 else gray
+            user_field_color = green if active_field == 2 else gray
             pygame.draw.rect(screen, user_field_color, user_field_rect, 2)
             user_display = small_font.render(user_text[-visible_text_chars:] if user_text else "", True, white)
             screen.blit(user_display, (user_field_rect.x + 10, user_field_rect.y + 13))
             
             email_label = small_font.render("Email:", True, white)
             screen.blit(email_label, (profile_label_x, email_field_rect.y + 13))
-            email_field_color = green if active_field == 4 else gray
+            email_field_color = green if active_field == 3 else gray
             pygame.draw.rect(screen, email_field_color, email_field_rect, 2)
             email_display = small_font.render(email_text[-visible_text_chars:] if email_text else "", True, white)
             screen.blit(email_display, (email_field_rect.x + 10, email_field_rect.y + 13))
 
             token_label = small_font.render("Token:", True, white)
             screen.blit(token_label, (profile_label_x, token_field_rect.y + 13))
-            token_field_color = green if active_field == 5 else gray
+            token_field_color = green if active_field == 4 else gray
             pygame.draw.rect(screen, token_field_color, token_field_rect, 2)
             token_masked = "*" * min(len(token_text), visible_text_chars)
             token_display = small_font.render(token_masked, True, white)
@@ -802,13 +785,6 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             year_display = small_font.render(year_text, True, white)
             screen.blit(year_display, (year_field_rect.x + 10, year_field_rect.y + 13))
             
-            file_label = small_font.render("File:", True, white)
-            screen.blit(file_label, (label_x, file_field_rect.y + 13))
-            file_field_color = green if active_field == 1 else gray
-            pygame.draw.rect(screen, file_field_color, file_field_rect, 2)
-            file_display = small_font.render(file_text[-visible_text_chars:] if file_text else "", True, white)
-            screen.blit(file_display, (file_field_rect.x + 10, file_field_rect.y + 13))
-
             force_label = small_font.render("Force Push:", True, white)
             screen.blit(force_label, (label_x, force_push_rect.y + 8))
             pygame.draw.rect(screen, green if force_push_enabled else gray, force_push_rect, 2)
@@ -835,7 +811,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
 
             url_label = small_font.render("URL:", True, white)
             screen.blit(url_label, (profile_label_x, url_field_rect.y + 13))
-            url_field_color = green if active_field == 2 else gray
+            url_field_color = green if active_field == 1 else gray
             pygame.draw.rect(screen, url_field_color, url_field_rect, 2)
             url_display = small_font.render(url_text[-visible_text_chars:] if url_text else "", True, white)
             screen.blit(url_display, (url_field_rect.x + 10, url_field_rect.y + 13))
@@ -1008,21 +984,21 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
 
                 user_label = small_font.render("User:", True, white)
                 screen.blit(user_label, (profile_label_x, user_field_rect.y + 13))
-                user_field_color = green if active_field == 3 else gray
+                user_field_color = green if active_field == 2 else gray
                 pygame.draw.rect(screen, user_field_color, user_field_rect, 2)
                 user_display = small_font.render(user_text[-visible_text_chars:] if user_text else "", True, white)
                 screen.blit(user_display, (user_field_rect.x + 10, user_field_rect.y + 13))
 
                 email_label = small_font.render("Email:", True, white)
                 screen.blit(email_label, (profile_label_x, email_field_rect.y + 13))
-                email_field_color = green if active_field == 4 else gray
+                email_field_color = green if active_field == 3 else gray
                 pygame.draw.rect(screen, email_field_color, email_field_rect, 2)
                 email_display = small_font.render(email_text[-visible_text_chars:] if email_text else "", True, white)
                 screen.blit(email_display, (email_field_rect.x + 10, email_field_rect.y + 13))
 
                 token_label = small_font.render("Token:", True, white)
                 screen.blit(token_label, (profile_label_x, token_field_rect.y + 13))
-                token_field_color = green if active_field == 5 else gray
+                token_field_color = green if active_field == 4 else gray
                 pygame.draw.rect(screen, token_field_color, token_field_rect, 2)
                 token_masked = "*" * min(len(token_text), visible_text_chars)
                 token_display = small_font.render(token_masked, True, white)
@@ -1034,13 +1010,6 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 pygame.draw.rect(screen, year_field_color, year_field_rect, 2)
                 year_display = small_font.render(year_text, True, white)
                 screen.blit(year_display, (year_field_rect.x + 10, year_field_rect.y + 13))
-
-                file_label = small_font.render("File:", True, white)
-                screen.blit(file_label, (label_x, file_field_rect.y + 13))
-                file_field_color = green if active_field == 1 else gray
-                pygame.draw.rect(screen, file_field_color, file_field_rect, 2)
-                file_display = small_font.render(file_text[-visible_text_chars:] if file_text else "", True, white)
-                screen.blit(file_display, (file_field_rect.x + 10, file_field_rect.y + 13))
 
                 force_label = small_font.render("Force Push:", True, white)
                 screen.blit(force_label, (label_x, force_push_rect.y + 8))
@@ -1068,7 +1037,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
 
                 url_label = small_font.render("URL:", True, white)
                 screen.blit(url_label, (profile_label_x, url_field_rect.y + 13))
-                url_field_color = green if active_field == 2 else gray
+                url_field_color = green if active_field == 1 else gray
                 pygame.draw.rect(screen, url_field_color, url_field_rect, 2)
                 url_display = small_font.render(url_text[-visible_text_chars:] if url_text else "", True, white)
                 screen.blit(url_display, (url_field_rect.x + 10, url_field_rect.y + 13))
