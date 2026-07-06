@@ -10,4 +10,5 @@ wheels/
 .venv
 
 /workspace/
-/schema/
+/schema/*
+!/schema/default-data.json
