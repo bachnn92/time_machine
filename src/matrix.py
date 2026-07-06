@@ -288,6 +288,8 @@ def run_app(year: int = 2015, filename: str = "data.json") -> None:
                             drag_right_active = False
                             drag_last_cell = None
                         elif deploy_button_rect.collidepoint((x, y)):
+                            deploy_status = "Deploying..."
+                            deploy_status_color = green
                             try:
                                 repo_path, commit_total = deploy_mock_repo(marked, year, applied_file)
                                 deploy_status = f"Deployed {repo_path.name} with {commit_total} commits"

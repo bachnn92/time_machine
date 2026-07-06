@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -17,11 +18,7 @@ def _slugify(value: str) -> str:
 
 
 def _build_repo_path(workspace_root: Path, year: int, data_file: str) -> Path:
-    repo_root = workspace_root / " workspace"
-    repo_root.mkdir(exist_ok=True)
-    stem = Path(data_file).stem or "data"
-    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    return repo_root / f"{year}-{_slugify(stem)}-{timestamp}"
+    return workspace_root / "workspace"
 
 
 def _run_git(command: list[str], cwd: Path, env: dict[str, str] | None = None) -> None:
@@ -36,6 +33,13 @@ def _run_git(command: list[str], cwd: Path, env: dict[str, str] | None = None) -
     if result.returncode != 0:
         message = result.stderr.strip() or result.stdout.strip() or "git command failed"
         raise RuntimeError(message)
+
+
+def _clean_workspace(repo_path: Path) -> None:
+    if repo_path.is_dir():
+        shutil.rmtree(repo_path)
+    elif repo_path.exists():
+        repo_path.unlink()
 
 
 def deploy_mock_repo(
@@ -58,7 +62,8 @@ def deploy_mock_repo(
 
     root = Path(workspace_root or os.getcwd())
     repo_path = _build_repo_path(root, year, data_file)
-    repo_path.mkdir(parents=True, exist_ok=False)
+    _clean_workspace(repo_path)
+    repo_path.mkdir(parents=True, exist_ok=True)
 
     _run_git(["git", "init"], cwd=repo_path)
     _run_git(["git", "branch", "-m", "main"], cwd=repo_path)
