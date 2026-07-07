@@ -40,6 +40,7 @@ def generate_random_marked_dates(
     year: int,
     start_date: datetime | None = None,
     end_date: datetime | None = None,
+    max_level: int = 8,
 ) -> dict[tuple[int, int], int]:
     """Generate random marked dates across an inclusive date range."""
     range_start = start_date or datetime(year, 1, 1)
@@ -58,7 +59,7 @@ def generate_random_marked_dates(
         rate = 0.2 if day_of_week in [0, 6] else 0.8
 
         if random_binary(rate):
-            marked[(week, day_of_week)] = random.randint(1, 4)
+            marked[(week, day_of_week)] = random.randint(1, max_level)
 
         current += timedelta(days=1)
 

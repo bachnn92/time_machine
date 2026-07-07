@@ -8,8 +8,8 @@ from datetime import datetime
 from .daytime import date_from_year_grid_position, year_grid_position
 
 
-def _clamp_level(level: int) -> int:
-    return max(0, min(4, level))
+def _clamp_level(level: int, max_level: int = 8) -> int:
+    return max(0, min(max_level, level))
 
 
 def _get_filepath(filename: str) -> str:
@@ -55,6 +55,7 @@ def _default_git_profile() -> dict:
         "debug": False,
         "random": False,
         "highlight_year_bounds": False,
+        "max_level": 8,
     }
 
 
@@ -83,7 +84,7 @@ def load_commit_schedule(filename: str = "data.json") -> list[tuple[datetime, in
                 date_str = item.get("date")
                 if not isinstance(date_str, str):
                     continue
-                level = _clamp_level(int(item.get("level", 4)))
+                level = _clamp_level(int(item.get("level", 4)), max_level=8)
                 if level <= 0:
                     continue
                 schedule.append((datetime.fromisoformat(date_str), level))
@@ -125,7 +126,7 @@ def save_marked_dates(marked: dict[tuple[int, int], int], year: int, filename: s
     """
     dates = []
     for (week, day), level in marked.items():
-        level = _clamp_level(level)
+        level = _clamp_level(level, max_level=8)
         if level <= 0:
             continue
         dt = date_from_year_grid_position(year, week, day)
@@ -175,6 +176,7 @@ def load_git_profile(filename: str = "settings.json") -> dict:
         debug_value = settings_data.get("debug", False)
         random_value = settings_data.get("random", False)
         highlight_year_bounds_value = settings_data.get("highlight_year_bounds", False)
+        max_level_value = settings_data.get("max_level", 8)
         try:
             year_value = int(year_value)
         except (TypeError, ValueError):
@@ -196,6 +198,7 @@ def load_git_profile(filename: str = "settings.json") -> dict:
             "debug": bool(debug_value),
             "random": bool(random_value),
             "highlight_year_bounds": bool(highlight_year_bounds_value),
+            "max_level": int(max_level_value) if isinstance(max_level_value, (int, str)) else 8,
         }
     except:
         return defaults
@@ -212,6 +215,7 @@ def save_git_profile(
     debug: bool = False,
     random: bool = False,
     highlight_year_bounds: bool = False,
+    max_level: int = 8,
     filename: str = "settings.json",
 ) -> None:
     """Saves git profile and app settings to JSON file.
@@ -238,6 +242,7 @@ def save_git_profile(
             "debug": bool(debug),
             "random": bool(random),
             "highlight_year_bounds": bool(highlight_year_bounds),
+            "max_level": int(max_level),
         },
     }
     

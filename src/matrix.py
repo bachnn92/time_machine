@@ -68,6 +68,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     applied_debug = bool(git_profile.get("debug", False))
     applied_random = bool(git_profile.get("random", False))
     applied_highlight_year_bounds = bool(git_profile.get("highlight_year_bounds", False))
+    applied_max_level = git_profile.get("max_level", 8)
     if not isinstance(applied_file, str) or not applied_file.strip():
         applied_file = filename
     if not isinstance(applied_url, str):
@@ -84,6 +85,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     debug_enabled = applied_debug
     random_enabled = applied_random
     highlight_year_bounds_enabled = applied_highlight_year_bounds
+    max_level_text = str(applied_max_level)
     user_text = git_profile.get("user", git_profile.get("username", ""))
     email_text = git_profile.get("email", "")
     token_text = git_profile.get("token", "")
@@ -110,6 +112,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     debug_rect = pygame.Rect(field_x, settings_panel_y + 326, 24, 24)
     random_rect = pygame.Rect(field_x, settings_panel_y + 360, 24, 24)
     highlight_year_bounds_rect = pygame.Rect(field_x, settings_panel_y + 394, 24, 24)
+    max_level_field_rect = pygame.Rect(field_x, settings_panel_y + 428, field_width, 30)
     settings_button_row_width = settings_button_width * 3 + 20 * 2
     settings_button_row_x = settings_panel_x + settings_panel_width - 20 - settings_button_row_width
     settings_button_row_y = settings_panel_y + settings_panel_height - 64
@@ -169,10 +172,14 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     ]
     level_colors = [
         black,
-        (0, 70, 0),
+        (0, 50, 0),
+        (0, 80, 0),
         (0, 110, 0),
-        (0, 160, 0),
-        (0, 220, 0),
+        (0, 140, 0),
+        (0, 170, 0),
+        (0, 200, 0),
+        (0, 230, 0),
+        (0, 255, 0),
     ]
 
     drag_left_active = False
@@ -187,7 +194,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     marked = load_marked_dates(applied_file)
 
     def _set_active_field_value(value: str) -> None:
-        nonlocal year_text, url_text, user_text, email_text, token_text
+        nonlocal year_text, url_text, user_text, email_text, token_text, max_level_text
         if active_field == 0:
             year_text = "".join(ch for ch in value if ch.isdigit())[:4]
         elif active_field == 1:
@@ -198,6 +205,8 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             email_text = value[:100]
         elif active_field == 4:
             token_text = value[:120]
+        elif active_field == 5:
+            max_level_text = "".join(ch for ch in value if ch.isdigit())[:1]
 
     def _get_active_field_value() -> str:
         if active_field == 0:
@@ -210,6 +219,8 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             return email_text
         if active_field == 4:
             return token_text
+        if active_field == 5:
+            return max_level_text
         return ""
 
     def _load_profile_fields() -> tuple[str, str, str]:
@@ -263,7 +274,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
 
     def _open_settings_panel() -> None:
         nonlocal settings_panel_open, year_text, file_text, url_text
-        nonlocal force_push_enabled, debug_enabled, random_enabled, highlight_year_bounds_enabled
+        nonlocal force_push_enabled, debug_enabled, random_enabled, highlight_year_bounds_enabled, max_level_text
         nonlocal user_text, email_text, token_text, active_field
         nonlocal template_panel_open, matrix_status, matrix_status_color
         save_marked_dates(marked, year, applied_file)
@@ -283,11 +294,12 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         debug_enabled = bool(git_profile_local.get("debug", False))
         random_enabled = bool(git_profile_local.get("random", False))
         highlight_year_bounds_enabled = bool(git_profile_local.get("highlight_year_bounds", False))
+        max_level_text = str(git_profile_local.get("max_level", 8))
         active_field = None
 
     def _cancel_settings_panel() -> None:
         nonlocal settings_panel_open, year_text, file_text, url_text
-        nonlocal force_push_enabled, debug_enabled, random_enabled, highlight_year_bounds_enabled
+        nonlocal force_push_enabled, debug_enabled, random_enabled, highlight_year_bounds_enabled, max_level_text
         nonlocal user_text, email_text, token_text, active_field
         nonlocal matrix_status, matrix_status_color
         year_text = str(applied_year)
@@ -298,6 +310,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         debug_enabled = bool(git_profile_local.get("debug", False))
         random_enabled = bool(git_profile_local.get("random", False))
         highlight_year_bounds_enabled = bool(git_profile_local.get("highlight_year_bounds", False))
+        max_level_text = str(git_profile_local.get("max_level", 8))
         user_text = git_profile_local.get("user", git_profile_local.get("username", ""))
         email_text = git_profile_local.get("email", "")
         token_text = git_profile_local.get("token", "")
@@ -307,7 +320,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
 
     def _apply_settings_panel() -> bool:
         nonlocal applied_year, applied_url
-        nonlocal applied_force_push, applied_debug, applied_random, applied_highlight_year_bounds
+        nonlocal applied_force_push, applied_debug, applied_random, applied_highlight_year_bounds, applied_max_level
         nonlocal year, year_text, matrix, marked, settings_panel_open
         nonlocal matrix_status, matrix_status_color
         try:
@@ -317,6 +330,8 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             applied_debug = debug_enabled
             applied_random = random_enabled
             applied_highlight_year_bounds = highlight_year_bounds_enabled
+            applied_max_level = int(max_level_text) if max_level_text.isdigit() else 8
+            applied_max_level = max(1, min(8, applied_max_level))
             year = applied_year
             save_git_profile(
                 user_text,
@@ -329,6 +344,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 debug=debug_enabled,
                 random=random_enabled,
                 highlight_year_bounds=highlight_year_bounds_enabled,
+                max_level=applied_max_level,
             )
             matrix = generate_commit_matrix(applied_year)
             marked = load_marked_dates(applied_file)
@@ -370,6 +386,8 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         elif highlight_year_bounds_rect.collidepoint(pos):
                             highlight_year_bounds_enabled = not highlight_year_bounds_enabled
                             active_field = None
+                        elif max_level_field_rect.collidepoint(pos):
+                            active_field = 5
                         elif url_field_rect.collidepoint(pos):
                             active_field = 1
                         elif user_field_rect.collidepoint(pos):
@@ -393,6 +411,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             debug_enabled = False
                             random_enabled = False
                             highlight_year_bounds_enabled = False
+                            max_level_text = "8"
                         elif apply_button_rect.collidepoint(pos):
                             try:
                                 applied_year = int(year_text)
@@ -401,6 +420,8 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 applied_debug = debug_enabled
                                 applied_random = random_enabled
                                 applied_highlight_year_bounds = highlight_year_bounds_enabled
+                                applied_max_level = int(max_level_text) if max_level_text.isdigit() else 8
+                                applied_max_level = max(1, min(8, applied_max_level))
                                 year = applied_year
                                 # Save git profile
                                 save_git_profile(
@@ -414,6 +435,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                     debug=debug_enabled,
                                     random=random_enabled,
                                     highlight_year_bounds=highlight_year_bounds_enabled,
+                                    max_level=applied_max_level,
                                 )
                                 # Generate matrix and load marked dates
                                 matrix = generate_commit_matrix(applied_year)
@@ -435,6 +457,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             debug_enabled = bool(git_profile.get("debug", False))
                             random_enabled = bool(git_profile.get("random", False))
                             highlight_year_bounds_enabled = bool(git_profile.get("highlight_year_bounds", False))
+                            max_level_text = str(git_profile.get("max_level", 8))
                             user_text = git_profile.get("user", git_profile.get("username", ""))
                             email_text = git_profile.get("email", "")
                             token_text = git_profile.get("token", "")
@@ -464,7 +487,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         pygame.key.stop_text_input()
                         state = STATE_MATRIX
                     elif event.key == pygame.K_TAB:
-                        active_field = (active_field + 1) % 5 if active_field is not None else 0
+                        active_field = (active_field + 1) % 6 if active_field is not None else 0
                     elif event.key == pygame.K_RETURN:
                         try:
                             applied_year = int(year_text)
@@ -531,6 +554,8 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             elif highlight_year_bounds_rect.collidepoint(pos):
                                 highlight_year_bounds_enabled = not highlight_year_bounds_enabled
                                 active_field = None
+                            elif max_level_field_rect.collidepoint(pos):
+                                active_field = 5
                             elif url_field_rect.collidepoint(pos):
                                 active_field = 1
                             elif user_field_rect.collidepoint(pos):
@@ -602,7 +627,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 matrix_status_color = white
                             else:
                                 try:
-                                    marked = generate_random_marked_dates(applied_year)
+                                    marked = generate_random_marked_dates(applied_year, max_level=applied_max_level)
                                     save_marked_dates(marked, applied_year, applied_file)
                                     matrix_status = f"Random commits generated for {applied_year}"
                                     matrix_status_color = green
@@ -692,7 +717,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             day = (y - grid_y) // cell_size
                             if 0 <= week < matrix_columns and 0 <= day < 7 and date_from_year_grid_position(year, week, day) is not None:
                                 pos = (week, day)
-                                new_level = min(marked.get(pos, 0) + 1, 4)
+                                new_level = min(marked.get(pos, 0) + 1, applied_max_level)
                                 marked[pos] = new_level
                                 drag_left_active = True
                                 drag_last_cell = pos
@@ -743,7 +768,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             pos = (week, day)
                             if pos != drag_last_cell:
                                 if drag_left_active:
-                                    marked[pos] = min(marked.get(pos, 0) + 1, 4)
+                                    marked[pos] = min(marked.get(pos, 0) + 1, applied_max_level)
                                 elif drag_right_active:
                                     marked.pop(pos, None)
                                 drag_last_cell = pos
@@ -935,7 +960,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 screen.blit(label_surface, (label_x, matrix_y + 5))
             
             # Title and instructions
-            title = font.render("Time Machine - Commit Graph", True, green)
+            title = font.render("Commit Graph Time Machine", True, green)
             title_rect = title.get_rect(center=(matrix_center_x, 15))
             screen.blit(title, title_rect)
 
@@ -1111,13 +1136,12 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                     highlight_mark_rect = highlight_mark.get_rect(center=highlight_year_bounds_rect.center)
                     screen.blit(highlight_mark, highlight_mark_rect)
 
-                highlight_year_bounds_label = small_font.render("Highlight Year Ends:", True, white)
-                screen.blit(highlight_year_bounds_label, (label_x, highlight_year_bounds_rect.y + 8))
-                pygame.draw.rect(screen, green if highlight_year_bounds_enabled else gray, highlight_year_bounds_rect, 2)
-                if highlight_year_bounds_enabled:
-                    highlight_mark = small_font.render("X", True, green)
-                    highlight_mark_rect = highlight_mark.get_rect(center=highlight_year_bounds_rect.center)
-                    screen.blit(highlight_mark, highlight_mark_rect)
+                max_level_label = small_font.render("Max Level (1-8):", True, white)
+                screen.blit(max_level_label, (label_x, max_level_field_rect.y + 13))
+                max_level_field_color = green if active_field == 5 else gray
+                pygame.draw.rect(screen, max_level_field_color, max_level_field_rect, 2)
+                max_level_display = small_font.render(max_level_text, True, white)
+                screen.blit(max_level_display, (max_level_field_rect.x + 10, max_level_field_rect.y + 13))
 
                 url_label = small_font.render("URL:", True, white)
                 screen.blit(url_label, (profile_label_x, url_field_rect.y + 13))
