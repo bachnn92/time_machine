@@ -105,16 +105,32 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     visible_text_chars = max(36, (field_width - 30) // 8)
     profile_rect = pygame.Rect(settings_panel_x + 20, settings_panel_y + 45, settings_panel_width - 40, 175)
     app_settings_rect = pygame.Rect(settings_panel_x + 20, settings_panel_y + 237, settings_panel_width - 40, 197)
+    config_content_width = app_settings_rect.width - 36
+    config_left_rect = pygame.Rect(
+        app_settings_rect.x + 12,
+        app_settings_rect.y + 28,
+        config_content_width // 3,
+        app_settings_rect.height - 40,
+    )
+    config_right_rect = pygame.Rect(
+        config_left_rect.right + 12,
+        app_settings_rect.y + 28,
+        config_content_width - config_left_rect.width,
+        app_settings_rect.height - 40,
+    )
     user_field_rect = pygame.Rect(field_x, settings_panel_y + 78, field_width, 30)
     email_field_rect = pygame.Rect(field_x, settings_panel_y + 112, field_width, 30)
     url_field_rect = pygame.Rect(field_x, settings_panel_y + 146, field_width, 30)
     token_field_rect = pygame.Rect(field_x, settings_panel_y + 180, field_width, 30)
-    year_field_rect = pygame.Rect(field_x, settings_panel_y + 258, field_width, 30)
-    force_push_rect = pygame.Rect(field_x, settings_panel_y + 292, 24, 24)
-    debug_rect = pygame.Rect(field_x, settings_panel_y + 326, 24, 24)
-    random_rect = pygame.Rect(field_x, settings_panel_y + 360, 24, 24)
-    highlight_year_bounds_rect = pygame.Rect(field_x, settings_panel_y + 394, 24, 24)
-    max_level_field_rect = pygame.Rect(field_x, settings_panel_y + 428, field_width, 30)
+    config_left_field_x = config_left_rect.x + 122
+    config_left_field_width = config_left_rect.width - 134
+    toggle_box_x = config_right_rect.x + 174
+    year_field_rect = pygame.Rect(config_left_field_x, config_left_rect.y + 18, config_left_field_width, 30)
+    max_level_field_rect = pygame.Rect(config_left_field_x, config_left_rect.y + 64, config_left_field_width, 30)
+    force_push_rect = pygame.Rect(toggle_box_x, config_right_rect.y + 18, 24, 24)
+    debug_rect = pygame.Rect(toggle_box_x, config_right_rect.y + 52, 24, 24)
+    random_rect = pygame.Rect(toggle_box_x, config_right_rect.y + 86, 24, 24)
+    highlight_year_bounds_rect = pygame.Rect(toggle_box_x, config_right_rect.y + 120, 24, 24)
     settings_button_row_width = settings_button_width * 3 + 20 * 2
     settings_button_row_x = settings_panel_x + settings_panel_width - 20 - settings_button_row_width
     settings_button_row_y = settings_panel_y + settings_panel_height - 64
@@ -339,18 +355,29 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         app_settings_title = small_font.render("Configuration", True, green)
         screen.blit(app_settings_title, (app_settings_rect.x + 10, app_settings_rect.y + 6))
 
-        label_right_x = field_x - 12
-        _draw_settings_input("User:", label_right_x, user_field_rect, user_text, 2, placeholder="<user>")
-        _draw_settings_input("Email:", label_right_x, email_field_rect, email_text, 3)
-        _draw_settings_input("URL:", label_right_x, url_field_rect, url_text, 1, placeholder="<url>")
-        _draw_settings_input("Token:", label_right_x, token_field_rect, token_text, 4, masked=True, placeholder="<token>")
+        pygame.draw.rect(screen, (12, 12, 12), config_left_rect, border_radius=6)
+        left_section_title = small_font.render("Limits", True, green)
+        screen.blit(left_section_title, (config_left_rect.x + 8, config_left_rect.y + 4))
 
-        _draw_settings_input("Year:", label_right_x, year_field_rect, year_text, 0)
-        _draw_settings_toggle("Force Push:", label_right_x, force_push_rect, force_push_enabled)
-        _draw_settings_toggle("Debug:", label_right_x, debug_rect, debug_enabled)
-        _draw_settings_toggle("Random:", label_right_x, random_rect, random_enabled)
-        _draw_settings_toggle("Highlight Year Ends:", label_right_x, highlight_year_bounds_rect, highlight_year_bounds_enabled)
-        _draw_settings_input("Max Level (1-8):", label_right_x, max_level_field_rect, max_level_text, 5)
+        pygame.draw.rect(screen, (12, 12, 12), config_right_rect, border_radius=6)
+        right_section_title = small_font.render("Options", True, green)
+        screen.blit(right_section_title, (config_right_rect.x + 8, config_right_rect.y + 4))
+
+        profile_label_right_x = field_x - 12
+        config_left_label_right_x = year_field_rect.x - 12
+        config_right_label_right_x = force_push_rect.x - 12
+
+        _draw_settings_input("User", profile_label_right_x, user_field_rect, user_text, 2, placeholder="<user>")
+        _draw_settings_input("Email", profile_label_right_x, email_field_rect, email_text, 3)
+        _draw_settings_input("URL", profile_label_right_x, url_field_rect, url_text, 1, placeholder="<url>")
+        _draw_settings_input("Token", profile_label_right_x, token_field_rect, token_text, 4, masked=True, placeholder="<token>")
+
+        _draw_settings_input("Year", config_left_label_right_x, year_field_rect, year_text, 0)
+        _draw_settings_input("Max Commit", config_left_label_right_x, max_level_field_rect, max_level_text, 5)
+        _draw_settings_toggle("Force Push", config_right_label_right_x, force_push_rect, force_push_enabled)
+        _draw_settings_toggle("Debug", config_right_label_right_x, debug_rect, debug_enabled)
+        _draw_settings_toggle("Random", config_right_label_right_x, random_rect, random_enabled)
+        _draw_settings_toggle("Year Ends", config_right_label_right_x, highlight_year_bounds_rect, highlight_year_bounds_enabled)
 
         _draw_settings_button(default_settings_button_rect, "DEFAULT")
         _draw_settings_button(apply_button_rect, "APPLY")
@@ -867,7 +894,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             matrix_status = "Settings canceled"
                             matrix_status_color = dark_gray
                         elif event.key == pygame.K_TAB:
-                            active_field = (active_field + 1) % 5 if active_field is not None else 0
+                            active_field = (active_field + 1) % 6 if active_field is not None else 0
                         elif event.key == pygame.K_RETURN:
                             _apply_settings_panel()
                         elif event.key == pygame.K_BACKSPACE and active_field is not None:
