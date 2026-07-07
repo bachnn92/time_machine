@@ -91,6 +91,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     user_text = git_profile.get("user", git_profile.get("username", ""))
     email_text = git_profile.get("email", "")
     token_text = git_profile.get("token", "")
+    token_visible = False
     active_field = None
 
     settings_panel_width = min(860, screen_width - 40)
@@ -122,6 +123,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     email_field_rect = pygame.Rect(field_x, settings_panel_y + 112, field_width, 30)
     url_field_rect = pygame.Rect(field_x, settings_panel_y + 146, field_width, 30)
     token_field_rect = pygame.Rect(field_x, settings_panel_y + 180, field_width, 30)
+    token_visibility_rect = pygame.Rect(token_field_rect.right + 10, token_field_rect.y, 72, 30)
     config_left_field_x = config_left_rect.x + 122
     config_left_field_width = config_left_rect.width - 134
     toggle_box_x = config_right_rect.x + 16
@@ -481,8 +483,12 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         label_help_items.append((url_field_rect, url_help))
 
         token_help = "Access token used for authenticated git actions."
-        token_label_rect = _draw_settings_input("Token", profile_label_right_x, token_field_rect, token_text, 4, masked=True, placeholder="<token>")
+        token_label_rect = _draw_settings_input("Token", profile_label_right_x, token_field_rect, token_text, 4, masked=not token_visible, placeholder="<token>")
         label_help_items.append((token_field_rect, token_help))
+
+        token_visibility_text = "Hide" if token_visible else "Show"
+        _draw_settings_button(token_visibility_rect, token_visibility_text)
+        label_help_items.append((token_visibility_rect, "Show or hide the token text."))
 
         year_help = "Target year for the contribution matrix."
         year_label_rect = _draw_settings_input("Current Year", config_left_label_right_x, year_field_rect, year_text, 0)
@@ -540,7 +546,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     def _open_settings_panel() -> None:
         nonlocal settings_panel_open, year_text, file_text, url_text
         nonlocal force_push_enabled, debug_enabled, drag_lock_enabled, highlight_year_bounds_enabled, max_level_text
-        nonlocal user_text, email_text, token_text, active_field
+        nonlocal user_text, email_text, token_text, token_visible, active_field
         nonlocal template_panel_open, matrix_status, matrix_status_color
         save_marked_dates(marked, year, applied_file)
         matrix_status = "Opening settings..."
@@ -555,6 +561,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         user_text = git_profile_local.get("user", git_profile_local.get("username", "")) or user_text
         email_text = git_profile_local.get("email", "") or email_text
         token_text = git_profile_local.get("token", "") or token_text
+        token_visible = False
         force_push_enabled = bool(git_profile_local.get("force_push", False))
         debug_enabled = bool(git_profile_local.get("debug", False))
         drag_lock_enabled = bool(git_profile_local.get("drag_lock", False))
@@ -565,7 +572,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     def _cancel_settings_panel() -> None:
         nonlocal settings_panel_open, year_text, file_text, url_text
         nonlocal force_push_enabled, debug_enabled, drag_lock_enabled, highlight_year_bounds_enabled, max_level_text
-        nonlocal user_text, email_text, token_text, active_field
+        nonlocal user_text, email_text, token_text, token_visible, active_field
         nonlocal matrix_status, matrix_status_color
         year_text = str(applied_year)
         file_text = applied_file
@@ -579,6 +586,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         user_text = git_profile_local.get("user", git_profile_local.get("username", ""))
         email_text = git_profile_local.get("email", "")
         token_text = git_profile_local.get("token", "")
+        token_visible = False
         active_field = None
         settings_panel_open = False
         pygame.key.stop_text_input()
@@ -587,7 +595,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         nonlocal applied_year, applied_url
         nonlocal applied_force_push, applied_debug, applied_drag_lock, applied_highlight_year_bounds, applied_max_level
         nonlocal year, year_text, matrix, marked, settings_panel_open
-        nonlocal matrix_status, matrix_status_color
+        nonlocal token_visible, matrix_status, matrix_status_color
         try:
             applied_year = int(year_text)
             applied_url = url_text.strip()
@@ -615,6 +623,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             marked = load_marked_dates(applied_file)
             matrix_status = "Settings applied"
             matrix_status_color = green
+            token_visible = False
             settings_panel_open = False
             pygame.key.stop_text_input()
             return True
@@ -659,6 +668,9 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             active_field = 2
                         elif email_field_rect.collidepoint(pos):
                             active_field = 3
+                        elif token_visibility_rect.collidepoint(pos):
+                            token_visible = not token_visible
+                            active_field = None
                         elif token_field_rect.collidepoint(pos):
                             active_field = 4
                         elif default_settings_button_rect.collidepoint(pos):
@@ -693,6 +705,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 marked = load_marked_dates(applied_file)
                                 matrix_status = "Settings applied"
                                 matrix_status_color = green
+                                token_visible = False
                                 state = STATE_MATRIX
                             except ValueError:
                                 matrix_status = "Apply failed: year must be a number"
@@ -712,6 +725,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             user_text = git_profile.get("user", git_profile.get("username", ""))
                             email_text = git_profile.get("email", "")
                             token_text = git_profile.get("token", "")
+                            token_visible = False
                             active_field = None
                             matrix_status = "Settings canceled"
                             matrix_status_color = dark_gray
@@ -823,6 +837,9 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 active_field = 2
                             elif email_field_rect.collidepoint(pos):
                                 active_field = 3
+                            elif token_visibility_rect.collidepoint(pos):
+                                token_visible = not token_visible
+                                active_field = None
                             elif token_field_rect.collidepoint(pos):
                                 active_field = 4
                             elif default_settings_button_rect.collidepoint(pos):
