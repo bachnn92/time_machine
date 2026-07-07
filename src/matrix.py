@@ -287,26 +287,32 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
 
     def _draw_settings_input(
         label: str,
-        label_rect_x: int,
+        label_right_x: int,
         rect: pygame.Rect,
         value: str,
         field_id: int,
         masked: bool = False,
+        placeholder: str = "",
     ) -> None:
         label_surface = small_font.render(label, True, white)
-        screen.blit(label_surface, (label_rect_x, rect.y + 13))
+        label_x_pos = label_right_x - label_surface.get_width()
+        screen.blit(label_surface, (label_x_pos, rect.y + 13))
         border_color = green if active_field == field_id else gray
         pygame.draw.rect(screen, (14, 14, 14), rect, border_radius=5)
         pygame.draw.rect(screen, border_color, rect, 2, border_radius=5)
         display_text = value[-visible_text_chars:] if value else ""
-        if masked:
+        if masked and value:
             display_text = "*" * min(len(value), visible_text_chars)
-        text_surface = small_font.render(display_text, True, white)
+        if display_text:
+            text_surface = small_font.render(display_text, True, white)
+        else:
+            text_surface = small_font.render(placeholder, True, gray)
         screen.blit(text_surface, (rect.x + 10, rect.y + 13))
 
-    def _draw_settings_toggle(label: str, rect: pygame.Rect, enabled: bool) -> None:
+    def _draw_settings_toggle(label: str, label_right_x: int, rect: pygame.Rect, enabled: bool) -> None:
         label_surface = small_font.render(label, True, white)
-        screen.blit(label_surface, (label_x, rect.y + 8))
+        label_x_pos = label_right_x - label_surface.get_width()
+        screen.blit(label_surface, (label_x_pos, rect.y + 8))
         pygame.draw.rect(screen, (14, 14, 14), rect, border_radius=4)
         pygame.draw.rect(screen, green if enabled else gray, rect, 2, border_radius=4)
         if enabled:
@@ -333,18 +339,18 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         app_settings_title = small_font.render("Configuration", True, green)
         screen.blit(app_settings_title, (app_settings_rect.x + 10, app_settings_rect.y + 6))
 
-        profile_label_x = label_x + 2
-        _draw_settings_input("User:", profile_label_x, user_field_rect, user_text, 2)
-        _draw_settings_input("Email:", profile_label_x, email_field_rect, email_text, 3)
-        _draw_settings_input("URL:", profile_label_x, url_field_rect, url_text, 1)
-        _draw_settings_input("Token:", profile_label_x, token_field_rect, token_text, 4, masked=True)
+        label_right_x = field_x - 12
+        _draw_settings_input("User:", label_right_x, user_field_rect, user_text, 2, placeholder="<user>")
+        _draw_settings_input("Email:", label_right_x, email_field_rect, email_text, 3)
+        _draw_settings_input("URL:", label_right_x, url_field_rect, url_text, 1, placeholder="<url>")
+        _draw_settings_input("Token:", label_right_x, token_field_rect, token_text, 4, masked=True, placeholder="<token>")
 
-        _draw_settings_input("Year:", label_x, year_field_rect, year_text, 0)
-        _draw_settings_toggle("Force Push:", force_push_rect, force_push_enabled)
-        _draw_settings_toggle("Debug:", debug_rect, debug_enabled)
-        _draw_settings_toggle("Random:", random_rect, random_enabled)
-        _draw_settings_toggle("Highlight Year Ends:", highlight_year_bounds_rect, highlight_year_bounds_enabled)
-        _draw_settings_input("Max Level (1-8):", label_x, max_level_field_rect, max_level_text, 5)
+        _draw_settings_input("Year:", label_right_x, year_field_rect, year_text, 0)
+        _draw_settings_toggle("Force Push:", label_right_x, force_push_rect, force_push_enabled)
+        _draw_settings_toggle("Debug:", label_right_x, debug_rect, debug_enabled)
+        _draw_settings_toggle("Random:", label_right_x, random_rect, random_enabled)
+        _draw_settings_toggle("Highlight Year Ends:", label_right_x, highlight_year_bounds_rect, highlight_year_bounds_enabled)
+        _draw_settings_input("Max Level (1-8):", label_right_x, max_level_field_rect, max_level_text, 5)
 
         _draw_settings_button(default_settings_button_rect, "DEFAULT")
         _draw_settings_button(apply_button_rect, "APPLY")
@@ -368,10 +374,10 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         year_text = str(year)
         file_text = applied_file
         git_profile_local = load_git_profile()
-        url_text = git_profile_local.get("url", "")
-        user_text = git_profile_local.get("user", git_profile_local.get("username", ""))
-        email_text = git_profile_local.get("email", "")
-        token_text = git_profile_local.get("token", "")
+        url_text = git_profile_local.get("url", "") or applied_url
+        user_text = git_profile_local.get("user", git_profile_local.get("username", "")) or user_text
+        email_text = git_profile_local.get("email", "") or email_text
+        token_text = git_profile_local.get("token", "") or token_text
         force_push_enabled = bool(git_profile_local.get("force_push", False))
         debug_enabled = bool(git_profile_local.get("debug", False))
         random_enabled = bool(git_profile_local.get("random", False))
