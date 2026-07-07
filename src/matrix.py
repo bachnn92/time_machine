@@ -1071,6 +1071,13 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         drag_left_active = False
                         drag_right_active = False
                         drag_last_cell = None
+                    elif event.key == pygame.K_l:
+                        drag_lock_enabled = not drag_lock_enabled
+                        matrix_status = "Drag lock enabled" if drag_lock_enabled else "Drag lock disabled"
+                        matrix_status_color = green
+                        drag_left_active = False
+                        drag_right_active = False
+                        drag_last_cell = None
                 elif event.type == pygame.TEXTINPUT and settings_panel_open and active_field is not None:
                     if event.text and event.text.isprintable():
                         _set_active_field_value(_get_active_field_value() + event.text)
@@ -1129,9 +1136,9 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         hover_commits = str(marked.get((hover_week, hover_day), 0))
                         hover_axis_text = f"[{hover_day + 1}:{hover_week + 1}]"
                         if drag_lock_enabled:
-                            hover_guide_text = "Left click to draw | Right click to erase | Drag has been locked"
+                            hover_guide_text = "Left click to draw | Right click to erase | Enable to drag [L]."
                         else:
-                            hover_guide_text = "Left click/drag to draw | Right click/drag to erase"
+                            hover_guide_text = "Left click(drag) to draw | Right click(drag) to erase | Disable to drag [L]."
             
             # Draw labels
             day_labels = [(0, "Sun"), (3, "Wed"), (6, "Sat")]
@@ -1179,9 +1186,9 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 hover_guide_text = "1-5 load templates | Ctrl+1..5 save templates | Esc close"
             elif not hover_guide_text:
                 if drag_lock_enabled:
-                    hover_guide_text = "Click on the grid to draw | Drag lock ON | Scroll to change year"
+                    hover_guide_text = "Click on the grid to draw | Scroll to change year"
                 else:
-                    hover_guide_text = "Click/drag on the grid to draw | Scroll to change year"
+                    hover_guide_text = "Click(drag) on the grid to draw | Scroll to change year"
 
             main_button_help_items: list[tuple[pygame.Rect, str]] = [
                 (new_button_rect, "Start a new matrix [N]."),
@@ -1191,6 +1198,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 (deploy_button_rect, "Commit the current matrix to the local mock repository."),
                 (push_button_rect, "Push the current repository state to the remote origin."),
                 (archive_button_rect, "Archive the workspace repository into a saved archive."),
+                (year_scroll_rect, "Scroll to change year."),
                 (settings_button_rect, "Open the settings panel to edit year, profile, and options [S]."),
                 (exit_button_rect, "Save the current matrix and exit the application [Esc]."),
             ]
