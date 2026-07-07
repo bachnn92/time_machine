@@ -47,11 +47,12 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     available_cell = (35, 35, 35)
     out_of_year_cell = gray
     
-    # Fonts
-    font = pygame.font.SysFont('monospace', 16)
-    small_font = pygame.font.SysFont('monospace', 12)
-    title_font = pygame.font.SysFont('monospace', 24, bold=True)
-    year_font = pygame.font.SysFont('monospace', 32, bold=True)
+    # Fonts tuned for better readability on high-DPI displays.
+    font_name = 'consolas'
+    font = pygame.font.SysFont(font_name, 18, bold=True)
+    small_font = pygame.font.SysFont(font_name, 14, bold=True)
+    title_font = pygame.font.SysFont(font_name, 26, bold=True)
+    year_font = pygame.font.SysFont(font_name, 34, bold=True)
     
     # State machine
     STATE_SETTINGS = 0
@@ -123,7 +124,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     email_field_rect = pygame.Rect(field_x, settings_panel_y + 112, field_width, 30)
     url_field_rect = pygame.Rect(field_x, settings_panel_y + 146, field_width, 30)
     token_field_rect = pygame.Rect(field_x, settings_panel_y + 180, field_width, 30)
-    token_visibility_rect = pygame.Rect(token_field_rect.right + 10, token_field_rect.y, 72, 30)
+    token_visibility_rect = pygame.Rect(token_field_rect.right - 64, token_field_rect.y + 3, 60, 24)
     config_left_field_x = config_left_rect.x + 122
     config_left_field_width = config_left_rect.width - 134
     toggle_box_x = config_right_rect.x + 16
@@ -383,13 +384,31 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         help_rect = help_surface.get_rect(center=help_box_rect.center)
         screen.blit(help_surface, help_rect)
 
-    def _draw_settings_button(rect: pygame.Rect, text: str) -> None:
+    def _draw_settings_button(
+        rect: pygame.Rect,
+        text: str,
+        draw_border: bool = True,
+        default_fill: tuple[int, int, int] = (8, 8, 8),
+        hover_fill: tuple[int, int, int] = (18, 34, 24),
+        fill_alpha: int = 255,
+    ) -> None:
         hovered = rect.collidepoint(pygame.mouse.get_pos())
-        fill_color = (18, 34, 24) if hovered else (8, 8, 8)
+        fill_color = hover_fill if hovered else default_fill
         border_color = green if hovered else gray
         text_color = green if hovered else white
-        pygame.draw.rect(screen, fill_color, rect, border_radius=6)
-        pygame.draw.rect(screen, border_color, rect, 2, border_radius=6)
+        if fill_alpha < 255:
+            button_surface = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+            pygame.draw.rect(
+                button_surface,
+                (fill_color[0], fill_color[1], fill_color[2], max(0, min(255, fill_alpha))),
+                button_surface.get_rect(),
+                border_radius=6,
+            )
+            screen.blit(button_surface, rect.topleft)
+        else:
+            pygame.draw.rect(screen, fill_color, rect, border_radius=6)
+        if draw_border:
+            pygame.draw.rect(screen, border_color, rect, 2, border_radius=6)
         label = small_font.render(text, True, text_color)
         label_rect = label.get_rect(center=rect.center)
         screen.blit(label, label_rect)
@@ -410,9 +429,14 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         border_color = green if active_field == field_id else gray
         pygame.draw.rect(screen, (14, 14, 14), rect, border_radius=5)
         pygame.draw.rect(screen, border_color, rect, 2, border_radius=5)
-        display_text = value[-visible_text_chars:] if value else ""
+        field_visible_chars = visible_text_chars
+        if field_id == 4:
+            # Keep token text clear of the compact in-field Show/Hide button.
+            reserved_width = token_visibility_rect.width + 22
+            field_visible_chars = max(8, (rect.width - reserved_width) // 8)
+        display_text = value[-field_visible_chars:] if value else ""
         if masked and value:
-            display_text = "*" * min(len(value), visible_text_chars)
+            display_text = "*" * min(len(value), field_visible_chars)
         if display_text:
             text_surface = small_font.render(display_text, True, white)
         else:
@@ -487,7 +511,14 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         label_help_items.append((token_field_rect, token_help))
 
         token_visibility_text = "Hide" if token_visible else "Show"
-        _draw_settings_button(token_visibility_rect, token_visibility_text)
+        _draw_settings_button(
+            token_visibility_rect,
+            token_visibility_text,
+            draw_border=False,
+            default_fill=(14, 14, 14),
+            hover_fill=(20, 20, 20),
+            fill_alpha=120,
+        )
         label_help_items.append((token_visibility_rect, "Show or hide the token text."))
 
         year_help = "Target year for the contribution matrix."
