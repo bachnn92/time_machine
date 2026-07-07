@@ -68,7 +68,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     applied_url = git_profile.get("url", "")
     applied_force_push = bool(git_profile.get("force_push", False))
     applied_debug = bool(git_profile.get("debug", False))
-    applied_random = bool(git_profile.get("random", False))
+    applied_drag_lock = bool(git_profile.get("drag_lock", False))
     applied_highlight_year_bounds = bool(git_profile.get("highlight_year_bounds", False))
     applied_max_level = git_profile.get("max_level", 8)
     if not isinstance(applied_file, str) or not applied_file.strip():
@@ -85,7 +85,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     url_text = applied_url
     force_push_enabled = applied_force_push
     debug_enabled = applied_debug
-    random_enabled = applied_random
+    drag_lock_enabled = applied_drag_lock
     highlight_year_bounds_enabled = applied_highlight_year_bounds
     max_level_text = str(applied_max_level)
     user_text = git_profile.get("user", git_profile.get("username", ""))
@@ -129,7 +129,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     max_level_field_rect = pygame.Rect(config_left_field_x, config_left_rect.y + 64, config_left_field_width, 30)
     force_push_rect = pygame.Rect(toggle_box_x, config_right_rect.y + 18, 24, 24)
     debug_rect = pygame.Rect(toggle_box_x, config_right_rect.y + 52, 24, 24)
-    random_rect = pygame.Rect(toggle_box_x, config_right_rect.y + 86, 24, 24)
+    drag_lock_rect = pygame.Rect(toggle_box_x, config_right_rect.y + 86, 24, 24)
     highlight_year_bounds_rect = pygame.Rect(toggle_box_x, config_right_rect.y + 120, 24, 24)
     settings_button_row_width = settings_button_width * 3 + 20 * 2
     settings_button_row_x = settings_panel_x + settings_panel_width - 20 - settings_button_row_width
@@ -331,10 +331,6 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
 
     def _action_random_matrix() -> None:
         nonlocal marked, matrix_status, matrix_status_color
-        if not random_enabled:
-            matrix_status = "Random mode is off"
-            matrix_status_color = white
-            return
         try:
             marked = generate_random_marked_dates(applied_year, max_level=applied_max_level)
             save_marked_dates(marked, applied_year, applied_file)
@@ -360,7 +356,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
 
     def _reset_settings_to_defaults() -> None:
         nonlocal year_text, user_text, email_text, url_text, token_text
-        nonlocal force_push_enabled, debug_enabled, random_enabled, highlight_year_bounds_enabled, max_level_text
+        nonlocal force_push_enabled, debug_enabled, drag_lock_enabled, highlight_year_bounds_enabled, max_level_text
         default_user_text, default_email_text, default_url_text, default_token_text = _load_default_profile_fields()
         if default_user_text:
             user_text = default_user_text
@@ -373,7 +369,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         year_text = str(default_year)
         force_push_enabled = False
         debug_enabled = False
-        random_enabled = False
+        drag_lock_enabled = False
         highlight_year_bounds_enabled = False
         max_level_text = "8"
 
@@ -504,9 +500,9 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         debug_label_rect = _draw_settings_toggle("Debug", config_right_label_right_x, debug_rect, debug_enabled, label_on_right=True)
         label_help_items.append((debug_rect, debug_help))
 
-        random_help = "Allow RANDOM button to auto-fill commits."
-        random_label_rect = _draw_settings_toggle("Random", config_right_label_right_x, random_rect, random_enabled, label_on_right=True)
-        label_help_items.append((random_rect, random_help))
+        drag_lock_help = "Lock drawing to click-only cells (disable click-drag editing)."
+        drag_lock_label_rect = _draw_settings_toggle("Drag Lock", config_right_label_right_x, drag_lock_rect, drag_lock_enabled, label_on_right=True)
+        label_help_items.append((drag_lock_rect, drag_lock_help))
 
         year_ends_help = "Highlight Jan 1 and Dec 31 cells on the grid."
         year_ends_label_rect = _draw_settings_toggle("Year Ends", config_right_label_right_x, highlight_year_bounds_rect, highlight_year_bounds_enabled, label_on_right=True)
@@ -543,7 +539,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
 
     def _open_settings_panel() -> None:
         nonlocal settings_panel_open, year_text, file_text, url_text
-        nonlocal force_push_enabled, debug_enabled, random_enabled, highlight_year_bounds_enabled, max_level_text
+        nonlocal force_push_enabled, debug_enabled, drag_lock_enabled, highlight_year_bounds_enabled, max_level_text
         nonlocal user_text, email_text, token_text, active_field
         nonlocal template_panel_open, matrix_status, matrix_status_color
         save_marked_dates(marked, year, applied_file)
@@ -561,14 +557,14 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         token_text = git_profile_local.get("token", "") or token_text
         force_push_enabled = bool(git_profile_local.get("force_push", False))
         debug_enabled = bool(git_profile_local.get("debug", False))
-        random_enabled = bool(git_profile_local.get("random", False))
+        drag_lock_enabled = bool(git_profile_local.get("drag_lock", False))
         highlight_year_bounds_enabled = bool(git_profile_local.get("highlight_year_bounds", False))
         max_level_text = str(git_profile_local.get("max_level", 8))
         active_field = None
 
     def _cancel_settings_panel() -> None:
         nonlocal settings_panel_open, year_text, file_text, url_text
-        nonlocal force_push_enabled, debug_enabled, random_enabled, highlight_year_bounds_enabled, max_level_text
+        nonlocal force_push_enabled, debug_enabled, drag_lock_enabled, highlight_year_bounds_enabled, max_level_text
         nonlocal user_text, email_text, token_text, active_field
         nonlocal matrix_status, matrix_status_color
         year_text = str(applied_year)
@@ -577,7 +573,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         url_text = git_profile_local.get("url", "")
         force_push_enabled = bool(git_profile_local.get("force_push", False))
         debug_enabled = bool(git_profile_local.get("debug", False))
-        random_enabled = bool(git_profile_local.get("random", False))
+        drag_lock_enabled = bool(git_profile_local.get("drag_lock", False))
         highlight_year_bounds_enabled = bool(git_profile_local.get("highlight_year_bounds", False))
         max_level_text = str(git_profile_local.get("max_level", 8))
         user_text = git_profile_local.get("user", git_profile_local.get("username", ""))
@@ -589,7 +585,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
 
     def _apply_settings_panel() -> bool:
         nonlocal applied_year, applied_url
-        nonlocal applied_force_push, applied_debug, applied_random, applied_highlight_year_bounds, applied_max_level
+        nonlocal applied_force_push, applied_debug, applied_drag_lock, applied_highlight_year_bounds, applied_max_level
         nonlocal year, year_text, matrix, marked, settings_panel_open
         nonlocal matrix_status, matrix_status_color
         try:
@@ -597,7 +593,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             applied_url = url_text.strip()
             applied_force_push = force_push_enabled
             applied_debug = debug_enabled
-            applied_random = random_enabled
+            applied_drag_lock = drag_lock_enabled
             applied_highlight_year_bounds = highlight_year_bounds_enabled
             applied_max_level = int(max_level_text) if max_level_text.isdigit() else 8
             applied_max_level = max(1, min(8, applied_max_level))
@@ -611,7 +607,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 url=url_text,
                 force_push=force_push_enabled,
                 debug=debug_enabled,
-                random=random_enabled,
+                drag_lock=drag_lock_enabled,
                 highlight_year_bounds=highlight_year_bounds_enabled,
                 max_level=applied_max_level,
             )
@@ -649,8 +645,8 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         elif debug_rect.collidepoint(pos):
                             debug_enabled = not debug_enabled
                             active_field = None
-                        elif random_rect.collidepoint(pos):
-                            random_enabled = not random_enabled
+                        elif drag_lock_rect.collidepoint(pos):
+                            drag_lock_enabled = not drag_lock_enabled
                             active_field = None
                         elif highlight_year_bounds_rect.collidepoint(pos):
                             highlight_year_bounds_enabled = not highlight_year_bounds_enabled
@@ -673,7 +669,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 applied_url = url_text.strip()
                                 applied_force_push = force_push_enabled
                                 applied_debug = debug_enabled
-                                applied_random = random_enabled
+                                applied_drag_lock = drag_lock_enabled
                                 applied_highlight_year_bounds = highlight_year_bounds_enabled
                                 applied_max_level = int(max_level_text) if max_level_text.isdigit() else 8
                                 applied_max_level = max(1, min(8, applied_max_level))
@@ -688,7 +684,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                     url=url_text,
                                     force_push=force_push_enabled,
                                     debug=debug_enabled,
-                                    random=random_enabled,
+                                    drag_lock=drag_lock_enabled,
                                     highlight_year_bounds=highlight_year_bounds_enabled,
                                     max_level=applied_max_level,
                                 )
@@ -710,7 +706,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             url_text = git_profile.get("url", "")
                             force_push_enabled = bool(git_profile.get("force_push", False))
                             debug_enabled = bool(git_profile.get("debug", False))
-                            random_enabled = bool(git_profile.get("random", False))
+                            drag_lock_enabled = bool(git_profile.get("drag_lock", False))
                             highlight_year_bounds_enabled = bool(git_profile.get("highlight_year_bounds", False))
                             max_level_text = str(git_profile.get("max_level", 8))
                             user_text = git_profile.get("user", git_profile.get("username", ""))
@@ -731,7 +727,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         url_text = git_profile.get("url", "")
                         force_push_enabled = bool(git_profile.get("force_push", False))
                         debug_enabled = bool(git_profile.get("debug", False))
-                        random_enabled = bool(git_profile.get("random", False))
+                        drag_lock_enabled = bool(git_profile.get("drag_lock", False))
                         highlight_year_bounds_enabled = bool(git_profile.get("highlight_year_bounds", False))
                         user_text = git_profile.get("user", git_profile.get("username", ""))
                         email_text = git_profile.get("email", "")
@@ -749,7 +745,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             applied_url = url_text.strip()
                             applied_force_push = force_push_enabled
                             applied_debug = debug_enabled
-                            applied_random = random_enabled
+                            applied_drag_lock = drag_lock_enabled
                             applied_highlight_year_bounds = highlight_year_bounds_enabled
                             year = applied_year
                             save_git_profile(
@@ -761,7 +757,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 url=url_text,
                                 force_push=force_push_enabled,
                                 debug=debug_enabled,
-                                random=random_enabled,
+                                drag_lock=drag_lock_enabled,
                                 highlight_year_bounds=highlight_year_bounds_enabled,
                             )
                             matrix = generate_commit_matrix(applied_year)
@@ -813,8 +809,8 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             elif debug_rect.collidepoint(pos):
                                 debug_enabled = not debug_enabled
                                 active_field = None
-                            elif random_rect.collidepoint(pos):
-                                random_enabled = not random_enabled
+                            elif drag_lock_rect.collidepoint(pos):
+                                drag_lock_enabled = not drag_lock_enabled
                                 active_field = None
                             elif highlight_year_bounds_rect.collidepoint(pos):
                                 highlight_year_bounds_enabled = not highlight_year_bounds_enabled
@@ -947,7 +943,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 pos = (week, day)
                                 new_level = min(marked.get(pos, 0) + 1, applied_max_level)
                                 marked[pos] = new_level
-                                drag_left_active = True
+                                drag_left_active = not drag_lock_enabled
                                 drag_last_cell = pos
                     elif event.button == 3:
                         if settings_panel_open or template_panel_open:
@@ -958,7 +954,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             if 0 <= week < matrix_columns and 0 <= day < 7 and date_from_year_grid_position(year, week, day) is not None:
                                 pos = (week, day)
                                 marked.pop(pos, None)
-                                drag_right_active = True
+                                drag_right_active = not drag_lock_enabled
                                 drag_last_cell = pos
                 elif event.type == pygame.MOUSEBUTTONUP:
                     if event.button == 1:
@@ -1132,7 +1128,10 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         hover_date_text = hover_date.strftime("%A, %d %b")
                         hover_commits = str(marked.get((hover_week, hover_day), 0))
                         hover_axis_text = f"[{hover_day + 1}:{hover_week + 1}]"
-                        hover_guide_text = "Left click to draw | Right click to erase."
+                        if drag_lock_enabled:
+                            hover_guide_text = "Left click to draw | Right click to erase | Drag has been locked"
+                        else:
+                            hover_guide_text = "Left click/drag to draw | Right click/drag to erase"
             
             # Draw labels
             day_labels = [(0, "Sun"), (3, "Wed"), (6, "Sat")]
@@ -1179,7 +1178,10 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             if template_panel_open:
                 hover_guide_text = "1-5 load templates | Ctrl+1..5 save templates | Esc close"
             elif not hover_guide_text:
-                hover_guide_text = "Click(drag) on the grid to draw | Scroll to change year."
+                if drag_lock_enabled:
+                    hover_guide_text = "Click on the grid to draw | Drag lock ON | Scroll to change year"
+                else:
+                    hover_guide_text = "Click/drag on the grid to draw | Scroll to change year"
 
             main_button_help_items: list[tuple[pygame.Rect, str]] = [
                 (new_button_rect, "Start a new matrix [N]."),

@@ -54,6 +54,7 @@ def _default_git_profile() -> dict:
         "force_push": False,
         "debug": False,
         "random": False,
+        "drag_lock": False,
         "highlight_year_bounds": False,
         "max_level": 8,
     }
@@ -175,6 +176,7 @@ def load_git_profile(filename: str = "settings.json") -> dict:
         force_push_value = settings_data.get("force_push", False)
         debug_value = settings_data.get("debug", False)
         random_value = settings_data.get("random", False)
+        drag_lock_value = settings_data.get("drag_lock", False)
         highlight_year_bounds_value = settings_data.get("highlight_year_bounds", False)
         max_level_value = settings_data.get("max_level", 8)
         try:
@@ -197,6 +199,7 @@ def load_git_profile(filename: str = "settings.json") -> dict:
             "force_push": bool(force_push_value),
             "debug": bool(debug_value),
             "random": bool(random_value),
+            "drag_lock": bool(drag_lock_value),
             "highlight_year_bounds": bool(highlight_year_bounds_value),
             "max_level": int(max_level_value) if isinstance(max_level_value, (int, str)) else 8,
         }
@@ -214,6 +217,7 @@ def save_git_profile(
     force_push: bool = False,
     debug: bool = False,
     random: bool = False,
+    drag_lock: bool = False,
     highlight_year_bounds: bool = False,
     max_level: int = 8,
     filename: str = "settings.json",
@@ -241,6 +245,7 @@ def save_git_profile(
             "force_push": bool(force_push),
             "debug": bool(debug),
             "random": bool(random),
+            "drag_lock": bool(drag_lock),
             "highlight_year_bounds": bool(highlight_year_bounds),
             "max_level": int(max_level),
         },
