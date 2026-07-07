@@ -44,7 +44,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     gray = (100, 100, 100)
     dark_gray = (50, 50, 50)
     cell_border = (35, 35, 35)
-    out_of_year_cell = (12, 12, 12)
+    out_of_year_cell = gray
     
     # Fonts
     font = pygame.font.SysFont('monospace', 16)
@@ -168,7 +168,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         )
     ]
     level_colors = [
-        (20, 20, 20),
+        black,
         (0, 70, 0),
         (0, 110, 0),
         (0, 160, 0),
@@ -935,7 +935,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 screen.blit(label_surface, (label_x, matrix_y + 5))
             
             # Title and instructions
-            title = font.render("Time Machine - Matrix", True, green)
+            title = font.render("Time Machine - Commit Graph", True, green)
             title_rect = title.get_rect(center=(matrix_center_x, 15))
             screen.blit(title, title_rect)
 
