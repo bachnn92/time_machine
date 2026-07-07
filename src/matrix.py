@@ -35,6 +35,12 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     screen_width, screen_height = 920, 580
     screen = pygame.display.set_mode((screen_width, screen_height))
     pygame.display.set_caption("Time Machine")
+    try:
+        import pygame.scrap
+        pygame.scrap.init()
+    except Exception:
+        # Clipboard integration is optional; app input still works without it.
+        pass
     
     # Colors
     black = (0, 0, 0)
@@ -94,6 +100,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     token_text = git_profile.get("token", "")
     token_visible = False
     active_field = None
+    selected_all_field: int | None = None
 
     settings_panel_width = min(860, screen_width - 40)
     settings_panel_height = min(520, screen_height - 30)
@@ -243,6 +250,67 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         if active_field == 5:
             return max_level_text
         return ""
+
+    def _clear_field_selection() -> None:
+        nonlocal selected_all_field
+        selected_all_field = None
+
+    def _select_all_active_field() -> None:
+        nonlocal selected_all_field
+        if active_field is not None:
+            selected_all_field = active_field
+
+    def _is_active_field_selected() -> bool:
+        return active_field is not None and selected_all_field == active_field
+
+    def _activate_text_field(field_id: int) -> None:
+        nonlocal active_field
+        if active_field == field_id:
+            _select_all_active_field()
+            return
+        active_field = field_id
+        _clear_field_selection()
+
+    def _set_clipboard_text(value: str) -> None:
+        text_value = value or ""
+        try:
+            import pygame.scrap
+            scrap_type = getattr(pygame.scrap, "SCRAP_TEXT", None) or getattr(pygame, "SCRAP_TEXT", None)
+            if scrap_type is not None:
+                pygame.scrap.put(scrap_type, text_value.encode("utf-8"))
+                return
+        except Exception:
+            pass
+        try:
+            import tkinter as tk
+            root = tk.Tk()
+            root.withdraw()
+            root.clipboard_clear()
+            root.clipboard_append(text_value)
+            root.update()
+            root.destroy()
+        except Exception:
+            pass
+
+    def _get_clipboard_text() -> str:
+        try:
+            import pygame.scrap
+            scrap_type = getattr(pygame.scrap, "SCRAP_TEXT", None) or getattr(pygame, "SCRAP_TEXT", None)
+            if scrap_type is not None:
+                raw_value = pygame.scrap.get(scrap_type)
+                if raw_value:
+                    return raw_value.decode("utf-8", errors="ignore").replace("\x00", "")
+        except Exception:
+            pass
+        try:
+            import tkinter as tk
+            root = tk.Tk()
+            root.withdraw()
+            text_value = root.clipboard_get()
+            root.destroy()
+            return text_value
+        except Exception:
+            return ""
 
     def _load_profile_fields() -> tuple[str, str, str]:
         current_profile = load_git_profile()
@@ -438,6 +506,9 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         if masked and value:
             display_text = "*" * min(len(value), field_visible_chars)
         if display_text:
+            if active_field == field_id and selected_all_field == field_id:
+                selection_rect = pygame.Rect(rect.x + 8, rect.y + 7, rect.width - 16, rect.height - 14)
+                pygame.draw.rect(screen, (32, 78, 120), selection_rect, border_radius=4)
             text_surface = small_font.render(display_text, True, white)
         else:
             text_surface = small_font.render(placeholder, True, gray)
@@ -599,6 +670,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         highlight_year_bounds_enabled = bool(git_profile_local.get("highlight_year_bounds", False))
         max_level_text = str(git_profile_local.get("max_level", 8))
         active_field = None
+        _clear_field_selection()
 
     def _cancel_settings_panel() -> None:
         nonlocal settings_panel_open, year_text, file_text, url_text
@@ -619,6 +691,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         token_text = git_profile_local.get("token", "")
         token_visible = False
         active_field = None
+        _clear_field_selection()
         settings_panel_open = False
         pygame.key.stop_text_input()
 
@@ -656,6 +729,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             matrix_status_color = green
             token_visible = False
             settings_panel_open = False
+            _clear_field_selection()
             pygame.key.stop_text_input()
             return True
         except ValueError:
@@ -678,32 +752,37 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                     if event.button == 1:
                         pos = event.pos
                         if year_field_rect.collidepoint(pos):
-                            active_field = 0
+                            _activate_text_field(0)
                         elif force_push_rect.collidepoint(pos):
                             force_push_enabled = not force_push_enabled
                             active_field = None
+                            _clear_field_selection()
                         elif debug_rect.collidepoint(pos):
                             debug_enabled = not debug_enabled
                             active_field = None
+                            _clear_field_selection()
                         elif drag_lock_rect.collidepoint(pos):
                             drag_lock_enabled = not drag_lock_enabled
                             active_field = None
+                            _clear_field_selection()
                         elif highlight_year_bounds_rect.collidepoint(pos):
                             highlight_year_bounds_enabled = not highlight_year_bounds_enabled
                             active_field = None
+                            _clear_field_selection()
                         elif max_level_field_rect.collidepoint(pos):
-                            active_field = 5
+                            _activate_text_field(5)
                         elif url_field_rect.collidepoint(pos):
-                            active_field = 1
+                            _activate_text_field(1)
                         elif user_field_rect.collidepoint(pos):
-                            active_field = 2
+                            _activate_text_field(2)
                         elif email_field_rect.collidepoint(pos):
-                            active_field = 3
+                            _activate_text_field(3)
                         elif token_visibility_rect.collidepoint(pos):
                             token_visible = not token_visible
                             active_field = None
+                            _clear_field_selection()
                         elif token_field_rect.collidepoint(pos):
-                            active_field = 4
+                            _activate_text_field(4)
                         elif default_settings_button_rect.collidepoint(pos):
                             _reset_settings_to_defaults()
                         elif apply_button_rect.collidepoint(pos):
@@ -758,6 +837,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             token_text = git_profile.get("token", "")
                             token_visible = False
                             active_field = None
+                            _clear_field_selection()
                             matrix_status = "Settings canceled"
                             matrix_status_color = dark_gray
                             pygame.key.stop_text_input()
@@ -783,7 +863,25 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         pygame.key.stop_text_input()
                         state = STATE_MATRIX
                     elif event.key == pygame.K_TAB:
+                        _clear_field_selection()
                         active_field = (active_field + 1) % 6 if active_field is not None else 0
+                    elif active_field is not None and (event.mod & pygame.KMOD_CTRL):
+                        if event.key == pygame.K_a:
+                            _select_all_active_field()
+                        elif event.key == pygame.K_c and _is_active_field_selected():
+                            _set_clipboard_text(_get_active_field_value())
+                        elif event.key == pygame.K_x and _is_active_field_selected():
+                            _set_clipboard_text(_get_active_field_value())
+                            _set_active_field_value("")
+                            _clear_field_selection()
+                        elif event.key == pygame.K_v:
+                            pasted_text = _get_clipboard_text()
+                            if pasted_text:
+                                if _is_active_field_selected():
+                                    _set_active_field_value(pasted_text)
+                                else:
+                                    _set_active_field_value(_get_active_field_value() + pasted_text)
+                                _clear_field_selection()
                     elif event.key == pygame.K_RETURN:
                         try:
                             applied_year = int(year_text)
@@ -826,10 +924,18 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         matrix_status_color = dark_gray
                         state = STATE_MATRIX
                     elif event.key == pygame.K_BACKSPACE and active_field is not None:
-                        _set_active_field_value(_get_active_field_value()[:-1])
+                        if _is_active_field_selected():
+                            _set_active_field_value("")
+                            _clear_field_selection()
+                        else:
+                            _set_active_field_value(_get_active_field_value()[:-1])
                 elif event.type == pygame.TEXTINPUT and active_field is not None:
                     if event.text and event.text.isprintable():
-                        _set_active_field_value(_get_active_field_value() + event.text)
+                        if _is_active_field_selected():
+                            _set_active_field_value(event.text)
+                            _clear_field_selection()
+                        else:
+                            _set_active_field_value(_get_active_field_value() + event.text)
             
             elif state == STATE_MATRIX:
                 grid_width = matrix_columns * cell_size
@@ -847,32 +953,37 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         if settings_panel_open:
                             pos = event.pos
                             if year_field_rect.collidepoint(pos):
-                                active_field = 0
+                                _activate_text_field(0)
                             elif force_push_rect.collidepoint(pos):
                                 force_push_enabled = not force_push_enabled
                                 active_field = None
+                                _clear_field_selection()
                             elif debug_rect.collidepoint(pos):
                                 debug_enabled = not debug_enabled
                                 active_field = None
+                                _clear_field_selection()
                             elif drag_lock_rect.collidepoint(pos):
                                 drag_lock_enabled = not drag_lock_enabled
                                 active_field = None
+                                _clear_field_selection()
                             elif highlight_year_bounds_rect.collidepoint(pos):
                                 highlight_year_bounds_enabled = not highlight_year_bounds_enabled
                                 active_field = None
+                                _clear_field_selection()
                             elif max_level_field_rect.collidepoint(pos):
-                                active_field = 5
+                                _activate_text_field(5)
                             elif url_field_rect.collidepoint(pos):
-                                active_field = 1
+                                _activate_text_field(1)
                             elif user_field_rect.collidepoint(pos):
-                                active_field = 2
+                                _activate_text_field(2)
                             elif email_field_rect.collidepoint(pos):
-                                active_field = 3
+                                _activate_text_field(3)
                             elif token_visibility_rect.collidepoint(pos):
                                 token_visible = not token_visible
                                 active_field = None
+                                _clear_field_selection()
                             elif token_field_rect.collidepoint(pos):
-                                active_field = 4
+                                _activate_text_field(4)
                             elif default_settings_button_rect.collidepoint(pos):
                                 _reset_settings_to_defaults()
                             elif apply_button_rect.collidepoint(pos):
@@ -1051,7 +1162,25 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             matrix_status = "Settings canceled"
                             matrix_status_color = dark_gray
                         elif event.key == pygame.K_TAB:
+                            _clear_field_selection()
                             active_field = (active_field + 1) % 6 if active_field is not None else 0
+                        elif active_field is not None and (event.mod & pygame.KMOD_CTRL):
+                            if event.key == pygame.K_a:
+                                _select_all_active_field()
+                            elif event.key == pygame.K_c and _is_active_field_selected():
+                                _set_clipboard_text(_get_active_field_value())
+                            elif event.key == pygame.K_x and _is_active_field_selected():
+                                _set_clipboard_text(_get_active_field_value())
+                                _set_active_field_value("")
+                                _clear_field_selection()
+                            elif event.key == pygame.K_v:
+                                pasted_text = _get_clipboard_text()
+                                if pasted_text:
+                                    if _is_active_field_selected():
+                                        _set_active_field_value(pasted_text)
+                                    else:
+                                        _set_active_field_value(_get_active_field_value() + pasted_text)
+                                    _clear_field_selection()
                         elif event.key == pygame.K_RETURN:
                             _apply_settings_panel()
                         elif active_field is None and event.key == pygame.K_d:
@@ -1063,7 +1192,11 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             matrix_status = "Settings canceled"
                             matrix_status_color = dark_gray
                         elif event.key == pygame.K_BACKSPACE and active_field is not None:
-                            _set_active_field_value(_get_active_field_value()[:-1])
+                            if _is_active_field_selected():
+                                _set_active_field_value("")
+                                _clear_field_selection()
+                            else:
+                                _set_active_field_value(_get_active_field_value()[:-1])
                         continue
 
                     if template_panel_open:
@@ -1128,7 +1261,11 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         drag_last_cell = None
                 elif event.type == pygame.TEXTINPUT and settings_panel_open and active_field is not None:
                     if event.text and event.text.isprintable():
-                        _set_active_field_value(_get_active_field_value() + event.text)
+                        if _is_active_field_selected():
+                            _set_active_field_value(event.text)
+                            _clear_field_selection()
+                        else:
+                            _set_active_field_value(_get_active_field_value() + event.text)
         
         screen.fill(black)
         
