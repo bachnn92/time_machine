@@ -6,6 +6,8 @@ import os
 import re
 import shutil
 import subprocess
+import stat
+import time
 import zipfile
 from urllib.parse import quote, urlparse, urlunparse
 from datetime import datetime, timedelta
@@ -64,10 +66,53 @@ def _sanitize_remote_url(remote_url: str) -> str:
 
 
 def _clean_workspace(repo_path: Path) -> None:
+    def _force_remove_readonly(_func, path, _exc_info) -> None:
+        os.chmod(path, stat.S_IWRITE)
+        _func(path)
+
+    def _remove_path(target: Path, force_delete: bool) -> None:
+        if target.is_dir():
+            if force_delete:
+                shutil.rmtree(target, onerror=_force_remove_readonly)
+            else:
+                shutil.rmtree(target)
+        elif target.exists():
+            if force_delete:
+                os.chmod(target, stat.S_IWRITE)
+            target.unlink()
+
     if repo_path.is_dir():
-        shutil.rmtree(repo_path)
+        _remove_path(repo_path, force_delete=False)
     elif repo_path.exists():
-        repo_path.unlink()
+        _remove_path(repo_path, force_delete=False)
+
+
+def _clean_workspace_force(repo_path: Path) -> None:
+    last_error: Exception | None = None
+    for _ in range(5):
+        try:
+            if repo_path.is_dir() or repo_path.exists():
+                def _force_remove_readonly(_func, path, _exc_info) -> None:
+                    os.chmod(path, stat.S_IWRITE)
+                    _func(path)
+
+                if repo_path.is_dir():
+                    shutil.rmtree(repo_path, onerror=_force_remove_readonly)
+                elif repo_path.exists():
+                    os.chmod(repo_path, stat.S_IWRITE)
+                    repo_path.unlink()
+            return
+        except PermissionError as exc:
+            last_error = exc
+            time.sleep(0.15)
+        except OSError as exc:
+            last_error = exc
+            time.sleep(0.15)
+    if last_error is not None:
+        raise RuntimeError(
+            f"Failed to force-delete workspace folder '{repo_path}'. "
+            "Close open terminals or tools using that folder and try again."
+        ) from last_error
 
 
 def deploy_mock_repo(
@@ -81,6 +126,7 @@ def deploy_mock_repo(
     user_name = profile.get("user", "").strip()
     user_email = profile.get("email", "").strip()
     debug_mode = bool(profile.get("debug", False))
+    force_delete_workspace = bool(profile.get("force_push", False))
     if not user_name or not user_email:
         raise ValueError("Missing git user or email in schema/settings.json")
 
@@ -91,7 +137,10 @@ def deploy_mock_repo(
 
     root = Path(workspace_root or os.getcwd())
     repo_path = _build_repo_path(root, year, data_file)
-    _clean_workspace(repo_path)
+    if force_delete_workspace:
+        _clean_workspace_force(repo_path)
+    else:
+        _clean_workspace(repo_path)
     repo_path.mkdir(parents=True, exist_ok=True)
 
     _run_git(["git", "init"], cwd=repo_path)

@@ -438,10 +438,10 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         if default_token_text:
             token_text = default_token_text
         year_text = str(default_year)
-        force_push_enabled = False
-        debug_enabled = False
-        drag_lock_enabled = False
-        highlight_year_bounds_enabled = False
+        force_push_enabled = True
+        debug_enabled = True
+        drag_lock_enabled = True
+        highlight_year_bounds_enabled = True
         max_level_text = "8"
 
     def _draw_matrix_help_box(help_text: str, color: tuple[int, int, int] = tip_green) -> None:
@@ -566,19 +566,19 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         label_help_items: list[tuple[pygame.Rect, str]] = []
 
         user_help = "Git author username used for commits."
-        user_label_rect = _draw_settings_input("User", profile_label_right_x, user_field_rect, user_text, 2, placeholder="<user>")
+        user_label_rect = _draw_settings_input("User", profile_label_right_x, user_field_rect, user_text, 2, placeholder="Nguyen Ngoc Bach")
         label_help_items.append((user_field_rect, user_help))
 
         email_help = "Git author email used for commits."
-        email_label_rect = _draw_settings_input("Email", profile_label_right_x, email_field_rect, email_text, 3)
+        email_label_rect = _draw_settings_input("Email", profile_label_right_x, email_field_rect, email_text, 3, placeholder="bachnn92@gmail.com")
         label_help_items.append((email_field_rect, email_help))
 
         url_help = "Remote repository URL for push operations."
-        url_label_rect = _draw_settings_input("URL", profile_label_right_x, url_field_rect, url_text, 1, placeholder="<url>")
+        url_label_rect = _draw_settings_input("URL", profile_label_right_x, url_field_rect, url_text, 1, placeholder="https://github.com/bachnn92/test.git")
         label_help_items.append((url_field_rect, url_help))
 
         token_help = "Access token used for authenticated git actions."
-        token_label_rect = _draw_settings_input("Token", profile_label_right_x, token_field_rect, token_text, 4, masked=not token_visible, placeholder="<token>")
+        token_label_rect = _draw_settings_input("Token", profile_label_right_x, token_field_rect, token_text, 4, masked=not token_visible, placeholder="ghp_******")
         label_help_items.append((token_field_rect, token_help))
 
         token_visibility_text = "Hide" if token_visible else "Show"
@@ -593,15 +593,15 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         label_help_items.append((token_visibility_rect, "Show or hide the token text."))
 
         year_help = "Target year for the contribution matrix."
-        year_label_rect = _draw_settings_input("Current Year", config_left_label_right_x, year_field_rect, year_text, 0)
+        year_label_rect = _draw_settings_input("Current Year", config_left_label_right_x, year_field_rect, year_text, 0, placeholder="2026")
         label_help_items.append((year_field_rect, year_help))
 
         max_commit_help = "Maximum commit intensity level (1-8)."
-        max_commit_label_rect = _draw_settings_input("Max Commit", config_left_label_right_x, max_level_field_rect, max_level_text, 5)
+        max_commit_label_rect = _draw_settings_input("Max Commit", config_left_label_right_x, max_level_field_rect, max_level_text, 5, placeholder="8")
         label_help_items.append((max_level_field_rect, max_commit_help))
 
-        force_push_help = "Allow force-push when updating remote history."
-        force_push_label_rect = _draw_settings_toggle("Allow Force Push", config_right_label_right_x, force_push_rect, force_push_enabled, label_on_right=True)
+        force_push_help = "Allow force operations for push and workspace reset during commit."
+        force_push_label_rect = _draw_settings_toggle("Allow Force", config_right_label_right_x, force_push_rect, force_push_enabled, label_on_right=True)
         label_help_items.append((force_push_rect, force_push_help))
 
         debug_help = "Enable verbose debug output for operations."
