@@ -377,21 +377,49 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         config_right_label_right_x = force_push_rect.x - 12
         label_help_items: list[tuple[pygame.Rect, str]] = []
 
-        label_help_items.append((_draw_settings_input("User", profile_label_right_x, user_field_rect, user_text, 2, placeholder="<user>"), "Git author username used for commits."))
-        label_help_items.append((_draw_settings_input("Email", profile_label_right_x, email_field_rect, email_text, 3), "Git author email used for commits."))
-        label_help_items.append((_draw_settings_input("URL", profile_label_right_x, url_field_rect, url_text, 1, placeholder="<url>"), "Remote repository URL for push operations."))
-        label_help_items.append((_draw_settings_input("Token", profile_label_right_x, token_field_rect, token_text, 4, masked=True, placeholder="<token>"), "Access token used for authenticated git actions."))
+        user_help = "Git author username used for commits."
+        user_label_rect = _draw_settings_input("User", profile_label_right_x, user_field_rect, user_text, 2, placeholder="<user>")
+        label_help_items.append((user_field_rect, user_help))
 
-        label_help_items.append((_draw_settings_input("Year", config_left_label_right_x, year_field_rect, year_text, 0), "Target year for the contribution matrix."))
-        label_help_items.append((_draw_settings_input("Max Commit", config_left_label_right_x, max_level_field_rect, max_level_text, 5), "Maximum commit intensity level (1-8)."))
-        label_help_items.append((_draw_settings_toggle("Force Push", config_right_label_right_x, force_push_rect, force_push_enabled, label_on_right=True), "Allow force-push when updating remote history."))
-        label_help_items.append((_draw_settings_toggle("Debug", config_right_label_right_x, debug_rect, debug_enabled, label_on_right=True), "Enable verbose debug output for operations."))
-        label_help_items.append((_draw_settings_toggle("Random", config_right_label_right_x, random_rect, random_enabled, label_on_right=True), "Allow RANDOM button to auto-fill commits."))
-        label_help_items.append((_draw_settings_toggle("Year Ends", config_right_label_right_x, highlight_year_bounds_rect, highlight_year_bounds_enabled, label_on_right=True), "Highlight Jan 1 and Dec 31 cells on the grid."))
+        email_help = "Git author email used for commits."
+        email_label_rect = _draw_settings_input("Email", profile_label_right_x, email_field_rect, email_text, 3)
+        label_help_items.append((email_field_rect, email_help))
+
+        url_help = "Remote repository URL for push operations."
+        url_label_rect = _draw_settings_input("URL", profile_label_right_x, url_field_rect, url_text, 1, placeholder="<url>")
+        label_help_items.append((url_field_rect, url_help))
+
+        token_help = "Access token used for authenticated git actions."
+        token_label_rect = _draw_settings_input("Token", profile_label_right_x, token_field_rect, token_text, 4, masked=True, placeholder="<token>")
+        label_help_items.append((token_field_rect, token_help))
+
+        year_help = "Target year for the contribution matrix."
+        year_label_rect = _draw_settings_input("Year", config_left_label_right_x, year_field_rect, year_text, 0)
+        label_help_items.append((year_field_rect, year_help))
+
+        max_commit_help = "Maximum commit intensity level (1-8)."
+        max_commit_label_rect = _draw_settings_input("Max Commit", config_left_label_right_x, max_level_field_rect, max_level_text, 5)
+        label_help_items.append((max_level_field_rect, max_commit_help))
+
+        force_push_help = "Allow force-push when updating remote history."
+        force_push_label_rect = _draw_settings_toggle("Force Push", config_right_label_right_x, force_push_rect, force_push_enabled, label_on_right=True)
+        label_help_items.append((force_push_rect, force_push_help))
+
+        debug_help = "Enable verbose debug output for operations."
+        debug_label_rect = _draw_settings_toggle("Debug", config_right_label_right_x, debug_rect, debug_enabled, label_on_right=True)
+        label_help_items.append((debug_rect, debug_help))
+
+        random_help = "Allow RANDOM button to auto-fill commits."
+        random_label_rect = _draw_settings_toggle("Random", config_right_label_right_x, random_rect, random_enabled, label_on_right=True)
+        label_help_items.append((random_rect, random_help))
+
+        year_ends_help = "Highlight Jan 1 and Dec 31 cells on the grid."
+        year_ends_label_rect = _draw_settings_toggle("Year Ends", config_right_label_right_x, highlight_year_bounds_rect, highlight_year_bounds_enabled, label_on_right=True)
+        label_help_items.append((highlight_year_bounds_rect, year_ends_help))
 
         help_box_rect = pygame.Rect(settings_panel_x + 20, settings_button_row_y, settings_button_row_x - settings_panel_x - 32, settings_button_height)
 
-        hovered_help = "Hover a setting label to view help."
+        hovered_help = "Hover a textbox or checkbox to view help."
         mouse_pos = pygame.mouse.get_pos()
         for label_rect, help_text in label_help_items:
             if label_rect.collidepoint(mouse_pos):
