@@ -43,7 +43,8 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     tip_green = (38, 228, 118)
     gray = (100, 100, 100)
     dark_gray = (50, 50, 50)
-    cell_border = (35, 35, 35)
+    cell_border = black
+    available_cell = (35, 35, 35)
     out_of_year_cell = gray
     
     # Fonts
@@ -172,7 +173,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         )
     ]
     level_colors = [
-        black,
+        available_cell,
         (10, 57, 30),
         (19, 114, 59),
         (29, 171, 88),
@@ -272,6 +273,86 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         status_surface = small_font.render(matrix_status[:80], True, matrix_status_color)
         status_rect = status_surface.get_rect(midleft=(status_box_rect.x + 10, status_box_rect.centery))
         screen.blit(status_surface, status_rect)
+
+    def _draw_settings_button(rect: pygame.Rect, text: str) -> None:
+        hovered = rect.collidepoint(pygame.mouse.get_pos())
+        fill_color = (18, 34, 24) if hovered else (8, 8, 8)
+        border_color = green if hovered else gray
+        text_color = green if hovered else white
+        pygame.draw.rect(screen, fill_color, rect, border_radius=6)
+        pygame.draw.rect(screen, border_color, rect, 2, border_radius=6)
+        label = small_font.render(text, True, text_color)
+        label_rect = label.get_rect(center=rect.center)
+        screen.blit(label, label_rect)
+
+    def _draw_settings_input(
+        label: str,
+        label_rect_x: int,
+        rect: pygame.Rect,
+        value: str,
+        field_id: int,
+        masked: bool = False,
+    ) -> None:
+        label_surface = small_font.render(label, True, white)
+        screen.blit(label_surface, (label_rect_x, rect.y + 13))
+        border_color = green if active_field == field_id else gray
+        pygame.draw.rect(screen, (14, 14, 14), rect, border_radius=5)
+        pygame.draw.rect(screen, border_color, rect, 2, border_radius=5)
+        display_text = value[-visible_text_chars:] if value else ""
+        if masked:
+            display_text = "*" * min(len(value), visible_text_chars)
+        text_surface = small_font.render(display_text, True, white)
+        screen.blit(text_surface, (rect.x + 10, rect.y + 13))
+
+    def _draw_settings_toggle(label: str, rect: pygame.Rect, enabled: bool) -> None:
+        label_surface = small_font.render(label, True, white)
+        screen.blit(label_surface, (label_x, rect.y + 8))
+        pygame.draw.rect(screen, (14, 14, 14), rect, border_radius=4)
+        pygame.draw.rect(screen, green if enabled else gray, rect, 2, border_radius=4)
+        if enabled:
+            mark_rect = rect.inflate(-10, -10)
+            pygame.draw.rect(screen, green, mark_rect, border_radius=2)
+
+    def _draw_settings_form(panel_title_text: str, close_label_text: str, hint_center_y: int) -> None:
+        panel_rect = pygame.Rect(settings_panel_x, settings_panel_y, settings_panel_width, settings_panel_height)
+        shadow_rect = panel_rect.move(6, 6)
+        pygame.draw.rect(screen, (6, 6, 6), shadow_rect, border_radius=10)
+        pygame.draw.rect(screen, (12, 16, 14), panel_rect, border_radius=10)
+        pygame.draw.rect(screen, green, panel_rect, 2, border_radius=10)
+
+        panel_title = font.render(panel_title_text, True, green)
+        screen.blit(panel_title, (settings_panel_x + 18, settings_panel_y + 12))
+
+        pygame.draw.rect(screen, (10, 10, 10), profile_rect, border_radius=8)
+        pygame.draw.rect(screen, gray, profile_rect, 1, border_radius=8)
+        profile_title = small_font.render("Profile", True, green)
+        screen.blit(profile_title, (profile_rect.x + 10, profile_rect.y + 6))
+
+        pygame.draw.rect(screen, (10, 10, 10), app_settings_rect, border_radius=8)
+        pygame.draw.rect(screen, gray, app_settings_rect, 1, border_radius=8)
+        app_settings_title = small_font.render("Configuration", True, green)
+        screen.blit(app_settings_title, (app_settings_rect.x + 10, app_settings_rect.y + 6))
+
+        profile_label_x = label_x + 2
+        _draw_settings_input("User:", profile_label_x, user_field_rect, user_text, 2)
+        _draw_settings_input("Email:", profile_label_x, email_field_rect, email_text, 3)
+        _draw_settings_input("URL:", profile_label_x, url_field_rect, url_text, 1)
+        _draw_settings_input("Token:", profile_label_x, token_field_rect, token_text, 4, masked=True)
+
+        _draw_settings_input("Year:", label_x, year_field_rect, year_text, 0)
+        _draw_settings_toggle("Force Push:", force_push_rect, force_push_enabled)
+        _draw_settings_toggle("Debug:", debug_rect, debug_enabled)
+        _draw_settings_toggle("Random:", random_rect, random_enabled)
+        _draw_settings_toggle("Highlight Year Ends:", highlight_year_bounds_rect, highlight_year_bounds_enabled)
+        _draw_settings_input("Max Level (1-8):", label_x, max_level_field_rect, max_level_text, 5)
+
+        _draw_settings_button(default_settings_button_rect, "DEFAULT")
+        _draw_settings_button(apply_button_rect, "APPLY")
+        _draw_settings_button(close_button_rect, close_label_text)
+
+        settings_hint = small_font.render("Enter to apply | Esc to cancel", True, tip_green)
+        settings_hint_rect = settings_hint.get_rect(center=(screen_width // 2, hint_center_y))
+        screen.blit(settings_hint, settings_hint_rect)
 
     def _open_settings_panel() -> None:
         nonlocal settings_panel_open, year_text, file_text, url_text
@@ -801,104 +882,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         screen.fill(black)
         
         if state == STATE_SETTINGS:
-            # Draw settings screen
-            title = font.render("Time Machine Settings", True, green)
-            title_rect = title.get_rect(center=(screen_width // 2, 15))
-            screen.blit(title, title_rect)
-
-            pygame.draw.rect(screen, gray, app_settings_rect, 1)
-            app_settings_title = small_font.render("Configuration", True, green)
-            screen.blit(app_settings_title, (app_settings_rect.x + 8, app_settings_rect.y + 6))
-
-            pygame.draw.rect(screen, gray, profile_rect, 1)
-            profile_title = small_font.render("Profile", True, green)
-            screen.blit(profile_title, (profile_rect.x + 8, profile_rect.y + 6))
-            profile_label_x = label_x + 2
-            
-            user_label = small_font.render("User:", True, white)
-            screen.blit(user_label, (profile_label_x, user_field_rect.y + 13))
-            user_field_color = green if active_field == 2 else gray
-            pygame.draw.rect(screen, user_field_color, user_field_rect, 2)
-            user_display = small_font.render(user_text[-visible_text_chars:] if user_text else "", True, white)
-            screen.blit(user_display, (user_field_rect.x + 10, user_field_rect.y + 13))
-            
-            email_label = small_font.render("Email:", True, white)
-            screen.blit(email_label, (profile_label_x, email_field_rect.y + 13))
-            email_field_color = green if active_field == 3 else gray
-            pygame.draw.rect(screen, email_field_color, email_field_rect, 2)
-            email_display = small_font.render(email_text[-visible_text_chars:] if email_text else "", True, white)
-            screen.blit(email_display, (email_field_rect.x + 10, email_field_rect.y + 13))
-
-            token_label = small_font.render("Token:", True, white)
-            screen.blit(token_label, (profile_label_x, token_field_rect.y + 13))
-            token_field_color = green if active_field == 4 else gray
-            pygame.draw.rect(screen, token_field_color, token_field_rect, 2)
-            token_masked = "*" * min(len(token_text), visible_text_chars)
-            token_display = small_font.render(token_masked, True, white)
-            screen.blit(token_display, (token_field_rect.x + 10, token_field_rect.y + 13))
-
-            year_label = small_font.render("Year:", True, white)
-            screen.blit(year_label, (label_x, year_field_rect.y + 13))
-            year_field_color = green if active_field == 0 else gray
-            pygame.draw.rect(screen, year_field_color, year_field_rect, 2)
-            year_display = small_font.render(year_text, True, white)
-            screen.blit(year_display, (year_field_rect.x + 10, year_field_rect.y + 13))
-            
-            force_label = small_font.render("Force Push:", True, white)
-            screen.blit(force_label, (label_x, force_push_rect.y + 8))
-            pygame.draw.rect(screen, green if force_push_enabled else gray, force_push_rect, 2)
-            if force_push_enabled:
-                force_mark = small_font.render("X", True, green)
-                force_mark_rect = force_mark.get_rect(center=force_push_rect.center)
-                screen.blit(force_mark, force_mark_rect)
-
-            debug_label = small_font.render("Debug:", True, white)
-            screen.blit(debug_label, (label_x, debug_rect.y + 8))
-            pygame.draw.rect(screen, green if debug_enabled else gray, debug_rect, 2)
-            if debug_enabled:
-                debug_mark = small_font.render("X", True, green)
-                debug_mark_rect = debug_mark.get_rect(center=debug_rect.center)
-                screen.blit(debug_mark, debug_mark_rect)
-
-            random_label = small_font.render("Random:", True, white)
-            screen.blit(random_label, (label_x, random_rect.y + 8))
-            pygame.draw.rect(screen, green if random_enabled else gray, random_rect, 2)
-            if random_enabled:
-                random_mark = small_font.render("X", True, green)
-                random_mark_rect = random_mark.get_rect(center=random_rect.center)
-                screen.blit(random_mark, random_mark_rect)
-
-            url_label = small_font.render("URL:", True, white)
-            screen.blit(url_label, (profile_label_x, url_field_rect.y + 13))
-            url_field_color = green if active_field == 1 else gray
-            pygame.draw.rect(screen, url_field_color, url_field_rect, 2)
-            url_display = small_font.render(url_text[-visible_text_chars:] if url_text else "", True, white)
-            screen.blit(url_display, (url_field_rect.x + 10, url_field_rect.y + 13))
-
-            # DEFAULT button
-            default_settings_button_color = green if default_settings_button_rect.collidepoint(pygame.mouse.get_pos()) else white
-            pygame.draw.rect(screen, default_settings_button_color, default_settings_button_rect, 2)
-            default_settings_text = small_font.render("DEFAULT", True, default_settings_button_color)
-            default_settings_rect = default_settings_text.get_rect(center=default_settings_button_rect.center)
-            screen.blit(default_settings_text, default_settings_rect)
-            
-            # APPLY button
-            apply_button_color = green if apply_button_rect.collidepoint(pygame.mouse.get_pos()) else white
-            pygame.draw.rect(screen, apply_button_color, apply_button_rect, 2)
-            apply_text = small_font.render("APPLY", True, apply_button_color)
-            apply_rect = apply_text.get_rect(center=apply_button_rect.center)
-            screen.blit(apply_text, apply_rect)
-            
-            # CANCEL button
-            close_button_color = green if close_button_rect.collidepoint(pygame.mouse.get_pos()) else white
-            pygame.draw.rect(screen, close_button_color, close_button_rect, 2)
-            close_text = small_font.render("CANCEL", True, close_button_color)
-            close_rect = close_text.get_rect(center=close_button_rect.center)
-            screen.blit(close_text, close_rect)
-            
-            instructions = small_font.render("Enter to apply | Esc to cancel", True, tip_green)
-            instructions_rect = instructions.get_rect(center=(screen_width // 2, screen_height - 12))
-            screen.blit(instructions, instructions_rect)
+            _draw_settings_form("Time Machine Settings", "CANCEL", screen_height - 12)
         
         elif state == STATE_MATRIX:
             # Draw matrix screen
@@ -928,11 +912,11 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                     visual_level = min(max(level, 0), 5)
                     color = level_colors[visual_level] if cell_date is not None else out_of_year_cell
                     rect = pygame.Rect(grid_x + week * cell_size, grid_y + day * cell_size, cell_size, cell_size)
-                    pygame.draw.rect(screen, color, rect)
+                    pygame.draw.rect(screen, color, rect, border_radius=3)
                     if cell_date is not None and (week, day) in highlight_positions:
-                        pygame.draw.rect(screen, (255, 220, 80), rect, 2)
+                        pygame.draw.rect(screen, (255, 220, 80), rect, 2, border_radius=3)
                     else:
-                        pygame.draw.rect(screen, cell_border, rect, 1)
+                        pygame.draw.rect(screen, cell_border, rect, 1, border_radius=3)
 
             hover_date_text = ""
             hover_commits = ""
@@ -983,67 +967,79 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 screen.blit(hover_commits_surface, hover_commits_rect)
 
             new_button_color = green if new_button_rect.collidepoint(pygame.mouse.get_pos()) else white
-            pygame.draw.rect(screen, new_button_color, new_button_rect, 2)
+            pygame.draw.rect(screen, (14, 14, 14), new_button_rect, border_radius=6)
+            pygame.draw.rect(screen, new_button_color, new_button_rect, 2, border_radius=6)
             new_text = small_font.render("NEW", True, new_button_color)
             new_text_rect = new_text.get_rect(center=new_button_rect.center)
             screen.blit(new_text, new_text_rect)
 
             random_button_color = green if random_button_rect.collidepoint(pygame.mouse.get_pos()) else white
-            pygame.draw.rect(screen, random_button_color, random_button_rect, 2)
+            pygame.draw.rect(screen, (14, 14, 14), random_button_rect, border_radius=6)
+            pygame.draw.rect(screen, random_button_color, random_button_rect, 2, border_radius=6)
             random_text = small_font.render("RANDOM", True, random_button_color)
             random_text_rect = random_text.get_rect(center=random_button_rect.center)
             screen.blit(random_text, random_text_rect)
 
             deploy_button_color = green if deploy_button_rect.collidepoint(pygame.mouse.get_pos()) else white
-            pygame.draw.rect(screen, deploy_button_color, deploy_button_rect, 2)
+            pygame.draw.rect(screen, (14, 14, 14), deploy_button_rect, border_radius=6)
+            pygame.draw.rect(screen, deploy_button_color, deploy_button_rect, 2, border_radius=6)
             deploy_text = small_font.render("COMMIT", True, deploy_button_color)
             deploy_text_rect = deploy_text.get_rect(center=deploy_button_rect.center)
             screen.blit(deploy_text, deploy_text_rect)
 
             push_button_color = green if push_button_rect.collidepoint(pygame.mouse.get_pos()) else white
-            pygame.draw.rect(screen, push_button_color, push_button_rect, 2)
+            pygame.draw.rect(screen, (14, 14, 14), push_button_rect, border_radius=6)
+            pygame.draw.rect(screen, push_button_color, push_button_rect, 2, border_radius=6)
             push_text = small_font.render("PUSH", True, push_button_color)
             push_text_rect = push_text.get_rect(center=push_button_rect.center)
             screen.blit(push_text, push_text_rect)
 
             archive_button_color = green if archive_button_rect.collidepoint(pygame.mouse.get_pos()) else white
-            pygame.draw.rect(screen, archive_button_color, archive_button_rect, 2)
+            pygame.draw.rect(screen, (14, 14, 14), archive_button_rect, border_radius=6)
+            pygame.draw.rect(screen, archive_button_color, archive_button_rect, 2, border_radius=6)
             archive_text = small_font.render("ARCHIVE", True, archive_button_color)
             archive_text_rect = archive_text.get_rect(center=archive_button_rect.center)
             screen.blit(archive_text, archive_text_rect)
 
             default_button_color = green if default_button_rect.collidepoint(pygame.mouse.get_pos()) else white
-            pygame.draw.rect(screen, default_button_color, default_button_rect, 2)
+            pygame.draw.rect(screen, (14, 14, 14), default_button_rect, border_radius=6)
+            pygame.draw.rect(screen, default_button_color, default_button_rect, 2, border_radius=6)
             default_text = small_font.render("DEFAULT", True, default_button_color)
             default_text_rect = default_text.get_rect(center=default_button_rect.center)
             screen.blit(default_text, default_text_rect)
 
             settings_button_color = green if settings_button_rect.collidepoint(pygame.mouse.get_pos()) else white
-            pygame.draw.rect(screen, settings_button_color, settings_button_rect, 2)
+            pygame.draw.rect(screen, (14, 14, 14), settings_button_rect, border_radius=6)
+            pygame.draw.rect(screen, settings_button_color, settings_button_rect, 2, border_radius=6)
             settings_text = small_font.render("SETTINGS", True, settings_button_color)
             settings_text_rect = settings_text.get_rect(center=settings_button_rect.center)
             screen.blit(settings_text, settings_text_rect)
 
             template_button_color = green if template_button_rect.collidepoint(pygame.mouse.get_pos()) else white
-            pygame.draw.rect(screen, template_button_color, template_button_rect, 2)
+            pygame.draw.rect(screen, (14, 14, 14), template_button_rect, border_radius=6)
+            pygame.draw.rect(screen, template_button_color, template_button_rect, 2, border_radius=6)
             template_text = small_font.render("TEMPLATE", True, template_button_color)
             template_text_rect = template_text.get_rect(center=template_button_rect.center)
             screen.blit(template_text, template_text_rect)
 
             exit_button_color = green if exit_button_rect.collidepoint(pygame.mouse.get_pos()) else white
-            pygame.draw.rect(screen, exit_button_color, exit_button_rect, 2)
+            pygame.draw.rect(screen, (14, 14, 14), exit_button_rect, border_radius=6)
+            pygame.draw.rect(screen, exit_button_color, exit_button_rect, 2, border_radius=6)
             exit_text = small_font.render("EXIT", True, exit_button_color)
             exit_text_rect = exit_text.get_rect(center=exit_button_rect.center)
             screen.blit(exit_text, exit_text_rect)
 
             if template_panel_open:
-                pygame.draw.rect(screen, (15, 15, 15), template_panel_rect)
-                pygame.draw.rect(screen, gray, template_panel_rect, 2)
+                template_shadow_rect = template_panel_rect.move(6, 6)
+                pygame.draw.rect(screen, (6, 6, 6), template_shadow_rect, border_radius=10)
+                pygame.draw.rect(screen, (12, 16, 14), template_panel_rect, border_radius=10)
+                pygame.draw.rect(screen, green, template_panel_rect, 2, border_radius=10)
                 panel_title = font.render("Templates", True, green)
                 screen.blit(panel_title, (template_panel_rect.x + 18, template_panel_rect.y + 20))
 
                 close_color = green if template_close_rect.collidepoint(pygame.mouse.get_pos()) else white
-                pygame.draw.rect(screen, close_color, template_close_rect, 2)
+                pygame.draw.rect(screen, (14, 14, 14), template_close_rect, border_radius=6)
+                pygame.draw.rect(screen, close_color, template_close_rect, 2, border_radius=6)
                 close_text = small_font.render("CLOSE", True, close_color)
                 close_text_rect = close_text.get_rect(center=template_close_rect.center)
                 screen.blit(close_text, close_text_rect)
@@ -1053,13 +1049,15 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                     screen.blit(slot_label, (template_panel_rect.x + 24, template_panel_rect.y + 68 + i * 42))
 
                     load_color = green if template_load_rects[i].collidepoint(pygame.mouse.get_pos()) else white
-                    pygame.draw.rect(screen, load_color, template_load_rects[i], 2)
+                    pygame.draw.rect(screen, (14, 14, 14), template_load_rects[i], border_radius=6)
+                    pygame.draw.rect(screen, load_color, template_load_rects[i], 2, border_radius=6)
                     load_text = small_font.render("LOAD", True, load_color)
                     load_text_rect = load_text.get_rect(center=template_load_rects[i].center)
                     screen.blit(load_text, load_text_rect)
 
                     save_color = green if template_save_rects[i].collidepoint(pygame.mouse.get_pos()) else white
-                    pygame.draw.rect(screen, save_color, template_save_rects[i], 2)
+                    pygame.draw.rect(screen, (14, 14, 14), template_save_rects[i], border_radius=6)
+                    pygame.draw.rect(screen, save_color, template_save_rects[i], 2, border_radius=6)
                     save_text = small_font.render("SAVE", True, save_color)
                     save_text_rect = save_text.get_rect(center=template_save_rects[i].center)
                     screen.blit(save_text, save_text_rect)
@@ -1068,117 +1066,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 screen.blit(panel_hint, (template_panel_rect.x + 24, template_panel_rect.bottom - 26))
 
             if settings_panel_open:
-                pygame.draw.rect(screen, (15, 15, 15), pygame.Rect(settings_panel_x, settings_panel_y, settings_panel_width, settings_panel_height))
-                pygame.draw.rect(screen, gray, pygame.Rect(settings_panel_x, settings_panel_y, settings_panel_width, settings_panel_height), 2)
-
-                panel_title = font.render("Settings", True, green)
-                screen.blit(panel_title, (settings_panel_x + 18, settings_panel_y + 12))
-
-                pygame.draw.rect(screen, gray, app_settings_rect, 1)
-                app_settings_title = small_font.render("Configuration", True, green)
-                screen.blit(app_settings_title, (app_settings_rect.x + 8, app_settings_rect.y + 6))
-
-                pygame.draw.rect(screen, gray, profile_rect, 1)
-                profile_title = small_font.render("Profile", True, green)
-                screen.blit(profile_title, (profile_rect.x + 8, profile_rect.y + 6))
-                profile_label_x = label_x + 2
-
-                user_label = small_font.render("User:", True, white)
-                screen.blit(user_label, (profile_label_x, user_field_rect.y + 13))
-                user_field_color = green if active_field == 2 else gray
-                pygame.draw.rect(screen, user_field_color, user_field_rect, 2)
-                user_display = small_font.render(user_text[-visible_text_chars:] if user_text else "", True, white)
-                screen.blit(user_display, (user_field_rect.x + 10, user_field_rect.y + 13))
-
-                email_label = small_font.render("Email:", True, white)
-                screen.blit(email_label, (profile_label_x, email_field_rect.y + 13))
-                email_field_color = green if active_field == 3 else gray
-                pygame.draw.rect(screen, email_field_color, email_field_rect, 2)
-                email_display = small_font.render(email_text[-visible_text_chars:] if email_text else "", True, white)
-                screen.blit(email_display, (email_field_rect.x + 10, email_field_rect.y + 13))
-
-                token_label = small_font.render("Token:", True, white)
-                screen.blit(token_label, (profile_label_x, token_field_rect.y + 13))
-                token_field_color = green if active_field == 4 else gray
-                pygame.draw.rect(screen, token_field_color, token_field_rect, 2)
-                token_masked = "*" * min(len(token_text), visible_text_chars)
-                token_display = small_font.render(token_masked, True, white)
-                screen.blit(token_display, (token_field_rect.x + 10, token_field_rect.y + 13))
-
-                year_label = small_font.render("Year:", True, white)
-                screen.blit(year_label, (label_x, year_field_rect.y + 13))
-                year_field_color = green if active_field == 0 else gray
-                pygame.draw.rect(screen, year_field_color, year_field_rect, 2)
-                year_display = small_font.render(year_text, True, white)
-                screen.blit(year_display, (year_field_rect.x + 10, year_field_rect.y + 13))
-
-                force_label = small_font.render("Force Push:", True, white)
-                screen.blit(force_label, (label_x, force_push_rect.y + 8))
-                pygame.draw.rect(screen, green if force_push_enabled else gray, force_push_rect, 2)
-                if force_push_enabled:
-                    force_mark = small_font.render("X", True, green)
-                    force_mark_rect = force_mark.get_rect(center=force_push_rect.center)
-                    screen.blit(force_mark, force_mark_rect)
-
-                debug_label = small_font.render("Debug:", True, white)
-                screen.blit(debug_label, (label_x, debug_rect.y + 8))
-                pygame.draw.rect(screen, green if debug_enabled else gray, debug_rect, 2)
-                if debug_enabled:
-                    debug_mark = small_font.render("X", True, green)
-                    debug_mark_rect = debug_mark.get_rect(center=debug_rect.center)
-                    screen.blit(debug_mark, debug_mark_rect)
-
-                random_label = small_font.render("Random:", True, white)
-                screen.blit(random_label, (label_x, random_rect.y + 8))
-                pygame.draw.rect(screen, green if random_enabled else gray, random_rect, 2)
-                if random_enabled:
-                    random_mark = small_font.render("X", True, green)
-                    random_mark_rect = random_mark.get_rect(center=random_rect.center)
-                    screen.blit(random_mark, random_mark_rect)
-
-                highlight_year_bounds_label = small_font.render("Highlight Year Ends:", True, white)
-                screen.blit(highlight_year_bounds_label, (label_x, highlight_year_bounds_rect.y + 8))
-                pygame.draw.rect(screen, green if highlight_year_bounds_enabled else gray, highlight_year_bounds_rect, 2)
-                if highlight_year_bounds_enabled:
-                    highlight_mark = small_font.render("X", True, green)
-                    highlight_mark_rect = highlight_mark.get_rect(center=highlight_year_bounds_rect.center)
-                    screen.blit(highlight_mark, highlight_mark_rect)
-
-                max_level_label = small_font.render("Max Level (1-8):", True, white)
-                screen.blit(max_level_label, (label_x, max_level_field_rect.y + 13))
-                max_level_field_color = green if active_field == 5 else gray
-                pygame.draw.rect(screen, max_level_field_color, max_level_field_rect, 2)
-                max_level_display = small_font.render(max_level_text, True, white)
-                screen.blit(max_level_display, (max_level_field_rect.x + 10, max_level_field_rect.y + 13))
-
-                url_label = small_font.render("URL:", True, white)
-                screen.blit(url_label, (profile_label_x, url_field_rect.y + 13))
-                url_field_color = green if active_field == 1 else gray
-                pygame.draw.rect(screen, url_field_color, url_field_rect, 2)
-                url_display = small_font.render(url_text[-visible_text_chars:] if url_text else "", True, white)
-                screen.blit(url_display, (url_field_rect.x + 10, url_field_rect.y + 13))
-
-                default_settings_button_color = green if default_settings_button_rect.collidepoint(pygame.mouse.get_pos()) else white
-                pygame.draw.rect(screen, default_settings_button_color, default_settings_button_rect, 2)
-                default_settings_text = small_font.render("DEFAULT", True, default_settings_button_color)
-                default_settings_rect = default_settings_text.get_rect(center=default_settings_button_rect.center)
-                screen.blit(default_settings_text, default_settings_rect)
-
-                apply_button_color = green if apply_button_rect.collidepoint(pygame.mouse.get_pos()) else white
-                pygame.draw.rect(screen, apply_button_color, apply_button_rect, 2)
-                apply_text = small_font.render("APPLY", True, apply_button_color)
-                apply_rect = apply_text.get_rect(center=apply_button_rect.center)
-                screen.blit(apply_text, apply_rect)
-
-                close_button_color = green if close_button_rect.collidepoint(pygame.mouse.get_pos()) else white
-                pygame.draw.rect(screen, close_button_color, close_button_rect, 2)
-                close_text = small_font.render("CLOSE", True, close_button_color)
-                close_rect = close_text.get_rect(center=close_button_rect.center)
-                screen.blit(close_text, close_rect)
-
-                settings_hint = small_font.render("Enter to apply | Esc to cancel", True, tip_green)
-                settings_hint_rect = settings_hint.get_rect(center=(screen_width // 2, settings_panel_y + settings_panel_height - 12))
-                screen.blit(settings_hint, settings_hint_rect)
+                _draw_settings_form("Settings", "CLOSE", settings_panel_y + settings_panel_height - 12)
 
             if not settings_panel_open:
                 _draw_matrix_status_box()
