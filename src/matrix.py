@@ -287,16 +287,15 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         status_box_rect = pygame.Rect(screen_width // 2 - 240, screen_height - 86, 480, 38)
         pygame.draw.rect(screen, black, status_box_rect)
         status_surface = small_font.render(matrix_status[:80], True, matrix_status_color)
-        status_rect = status_surface.get_rect(midleft=(status_box_rect.x + 10, status_box_rect.centery))
+        status_rect = status_surface.get_rect(center=status_box_rect.center)
         screen.blit(status_surface, status_rect)
 
     def _draw_matrix_help_box(help_text: str) -> None:
-        help_box_rect = pygame.Rect(screen_width // 2 - 300, row1_y - 42, 600, 34)
-        pygame.draw.rect(screen, (8, 8, 8), help_box_rect, border_radius=6)
+        help_box_rect = pygame.Rect(screen_width // 2 - 300, row1_y - 52, 600, 34)
         if not help_text:
             return
         help_surface = small_font.render(help_text[:96], True, tip_green)
-        help_rect = help_surface.get_rect(midleft=(help_box_rect.x + 10, help_box_rect.centery))
+        help_rect = help_surface.get_rect(center=help_box_rect.center)
         screen.blit(help_surface, help_rect)
 
     def _draw_settings_button(rect: pygame.Rect, text: str) -> None:
@@ -1022,6 +1021,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             hover_date_text = ""
             hover_commits = ""
             hover_axis_text = ""
+            hover_guide_text = ""
             mouse_x, mouse_y = pygame.mouse.get_pos()
             if grid_x <= mouse_x < grid_x + grid_width and grid_y <= mouse_y < grid_y + grid_height:
                 hover_week = (mouse_x - grid_x) // cell_size
@@ -1032,6 +1032,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         hover_date_text = hover_date.strftime("%A, %d %b")
                         hover_commits = str(marked.get((hover_week, hover_day), 0))
                         hover_axis_text = f"[{hover_day + 1}:{hover_week + 1}]"
+                        hover_guide_text = "Left click/drag to draw | Right click/drag to erase | Scroll to change year"
             
             # Draw labels
             day_labels = [(0, "Sun"), (3, "Wed"), (6, "Sat")]
@@ -1064,7 +1065,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 hover_date_surface = small_font.render(hover_date_text, True, tip_green)
                 hover_date_rect = hover_date_surface.get_rect(center=(matrix_center_x, 74))
                 screen.blit(hover_date_surface, hover_date_rect)
-                
+
                 hover_commit_count = int(hover_commits) if hover_commits.isdigit() else 0
                 hover_commit_text = f"{hover_commit_count} commit(s)"
                 hover_commits_surface = small_font.render(hover_commit_text, True, tip_green)
@@ -1087,7 +1088,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 (exit_button_rect, "Save the current matrix and exit the application."),
             ]
 
-            hovered_main_help = ""
+            hovered_main_help = hover_guide_text
             for button_rect, help_text in main_button_help_items:
                 if button_rect.collidepoint(pygame.mouse.get_pos()):
                     hovered_main_help = help_text
@@ -1200,10 +1201,6 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             if not settings_panel_open:
                 _draw_matrix_status_box()
             
-            instructions = small_font.render("Left click/drag to draw | Right click/drag to erase | Scroll to change year", True, tip_green)
-            instructions_rect = instructions.get_rect(center=(screen_width // 2, screen_height - 12))
-            screen.blit(instructions, instructions_rect)
-        
         pygame.display.flip()
         clock.tick(30)
     
