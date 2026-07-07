@@ -927,14 +927,14 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 if 0 <= hover_week < matrix_columns and 0 <= hover_day < 7:
                     hover_date = date_from_year_grid_position(year, hover_week, hover_day)
                     if hover_date is not None:
-                        hover_date_text = hover_date.strftime("%d %b")
+                        hover_date_text = hover_date.strftime("%A, %d %b")
                         hover_commits = str(marked.get((hover_week, hover_day), 0))
             
             # Draw labels
-            days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-            for i, day in enumerate(days):
+            day_labels = [(0, "Sun"), (3, "Wed"), (6, "Sat")]
+            for row, day in day_labels:
                 text = small_font.render(day, True, white)
-                screen.blit(text, (matrix_x + 5, grid_y + i * cell_size + 2))
+                screen.blit(text, (matrix_x + 5, grid_y + row * cell_size + 2))
             
             month_labels: list[tuple[str, int]] = []
             for month in range(1, 13):
@@ -958,11 +958,13 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             year_scroll_rect = year_value_rect.inflate(16, 8)
 
             if hover_date_text:
-                hover_date_surface = small_font.render(f"Date: {hover_date_text}", True, tip_green)
+                hover_date_surface = small_font.render(hover_date_text, True, tip_green)
                 hover_date_rect = hover_date_surface.get_rect(center=(matrix_center_x, 74))
                 screen.blit(hover_date_surface, hover_date_rect)
                 
-                hover_commits_surface = small_font.render(f"Commits: {hover_commits}", True, tip_green)
+                hover_commit_count = int(hover_commits) if hover_commits.isdigit() else 0
+                hover_commit_text = f"{hover_commit_count} commit(s)"
+                hover_commits_surface = small_font.render(hover_commit_text, True, tip_green)
                 hover_commits_rect = hover_commits_surface.get_rect(center=(matrix_center_x, 90))
                 screen.blit(hover_commits_surface, hover_commits_rect)
 
