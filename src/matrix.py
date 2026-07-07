@@ -124,7 +124,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     token_field_rect = pygame.Rect(field_x, settings_panel_y + 180, field_width, 30)
     config_left_field_x = config_left_rect.x + 122
     config_left_field_width = config_left_rect.width - 134
-    toggle_box_x = config_right_rect.x + 174
+    toggle_box_x = config_right_rect.x + 16
     year_field_rect = pygame.Rect(config_left_field_x, config_left_rect.y + 18, config_left_field_width, 30)
     max_level_field_rect = pygame.Rect(config_left_field_x, config_left_rect.y + 64, config_left_field_width, 30)
     force_push_rect = pygame.Rect(toggle_box_x, config_right_rect.y + 18, 24, 24)
@@ -325,9 +325,18 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             text_surface = small_font.render(placeholder, True, gray)
         screen.blit(text_surface, (rect.x + 10, rect.y + 13))
 
-    def _draw_settings_toggle(label: str, label_right_x: int, rect: pygame.Rect, enabled: bool) -> None:
+    def _draw_settings_toggle(
+        label: str,
+        label_right_x: int,
+        rect: pygame.Rect,
+        enabled: bool,
+        label_on_right: bool = False,
+    ) -> None:
         label_surface = small_font.render(label, True, white)
-        label_x_pos = label_right_x - label_surface.get_width()
+        if label_on_right:
+            label_x_pos = rect.right + 10
+        else:
+            label_x_pos = label_right_x - label_surface.get_width()
         screen.blit(label_surface, (label_x_pos, rect.y + 8))
         pygame.draw.rect(screen, (14, 14, 14), rect, border_radius=4)
         pygame.draw.rect(screen, green if enabled else gray, rect, 2, border_radius=4)
@@ -356,12 +365,8 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         screen.blit(app_settings_title, (app_settings_rect.x + 10, app_settings_rect.y + 6))
 
         pygame.draw.rect(screen, (12, 12, 12), config_left_rect, border_radius=6)
-        left_section_title = small_font.render("Limits", True, green)
-        screen.blit(left_section_title, (config_left_rect.x + 8, config_left_rect.y + 4))
 
         pygame.draw.rect(screen, (12, 12, 12), config_right_rect, border_radius=6)
-        right_section_title = small_font.render("Options", True, green)
-        screen.blit(right_section_title, (config_right_rect.x + 8, config_right_rect.y + 4))
 
         profile_label_right_x = field_x - 12
         config_left_label_right_x = year_field_rect.x - 12
@@ -374,10 +379,10 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
 
         _draw_settings_input("Year", config_left_label_right_x, year_field_rect, year_text, 0)
         _draw_settings_input("Max Commit", config_left_label_right_x, max_level_field_rect, max_level_text, 5)
-        _draw_settings_toggle("Force Push", config_right_label_right_x, force_push_rect, force_push_enabled)
-        _draw_settings_toggle("Debug", config_right_label_right_x, debug_rect, debug_enabled)
-        _draw_settings_toggle("Random", config_right_label_right_x, random_rect, random_enabled)
-        _draw_settings_toggle("Year Ends", config_right_label_right_x, highlight_year_bounds_rect, highlight_year_bounds_enabled)
+        _draw_settings_toggle("Force Push", config_right_label_right_x, force_push_rect, force_push_enabled, label_on_right=True)
+        _draw_settings_toggle("Debug", config_right_label_right_x, debug_rect, debug_enabled, label_on_right=True)
+        _draw_settings_toggle("Random", config_right_label_right_x, random_rect, random_enabled, label_on_right=True)
+        _draw_settings_toggle("Year Ends", config_right_label_right_x, highlight_year_bounds_rect, highlight_year_bounds_enabled, label_on_right=True)
 
         _draw_settings_button(default_settings_button_rect, "DEFAULT")
         _draw_settings_button(apply_button_rect, "APPLY")
