@@ -322,6 +322,61 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         matrix_status = f"Saved {template_filename}"
         matrix_status_color = green
 
+    def _action_new_matrix() -> None:
+        nonlocal marked, matrix_status, matrix_status_color
+        marked.clear()
+        save_marked_dates(marked, year, applied_file)
+        matrix_status = "New matrix created"
+        matrix_status_color = green
+
+    def _action_random_matrix() -> None:
+        nonlocal marked, matrix_status, matrix_status_color
+        if not random_enabled:
+            matrix_status = "Random mode is off"
+            matrix_status_color = white
+            return
+        try:
+            marked = generate_random_marked_dates(applied_year, max_level=applied_max_level)
+            save_marked_dates(marked, applied_year, applied_file)
+            matrix_status = f"Random commits generated for {applied_year}"
+            matrix_status_color = green
+        except Exception as exc:
+            matrix_status = f"Random failed: {exc}"
+            matrix_status_color = white
+
+    def _action_load_default_matrix() -> None:
+        nonlocal marked, matrix_status, matrix_status_color
+        marked = load_marked_dates("default-data.json")
+        matrix_status = "Loaded default-data.json"
+        matrix_status_color = green
+
+    def _open_template_panel() -> None:
+        nonlocal template_panel_open, settings_panel_open, matrix_status, matrix_status_color
+        template_panel_open = True
+        settings_panel_open = False
+        pygame.key.stop_text_input()
+        matrix_status = "Template panel opened"
+        matrix_status_color = green
+
+    def _reset_settings_to_defaults() -> None:
+        nonlocal year_text, user_text, email_text, url_text, token_text
+        nonlocal force_push_enabled, debug_enabled, random_enabled, highlight_year_bounds_enabled, max_level_text
+        default_user_text, default_email_text, default_url_text, default_token_text = _load_default_profile_fields()
+        if default_user_text:
+            user_text = default_user_text
+        if default_email_text:
+            email_text = default_email_text
+        if default_url_text:
+            url_text = default_url_text
+        if default_token_text:
+            token_text = default_token_text
+        year_text = str(default_year)
+        force_push_enabled = False
+        debug_enabled = False
+        random_enabled = False
+        highlight_year_bounds_enabled = False
+        max_level_text = "8"
+
     def _draw_matrix_help_box(help_text: str) -> None:
         help_box_rect = pygame.Rect(screen_width // 2 - 300, row1_y - 52, 600, 34)
         if not help_text:
@@ -457,9 +512,9 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         year_ends_label_rect = _draw_settings_toggle("Year Ends", config_right_label_right_x, highlight_year_bounds_rect, highlight_year_bounds_enabled, label_on_right=True)
         label_help_items.append((highlight_year_bounds_rect, year_ends_help))
 
-        default_help = "Restore profile and configuration values to defaults."
-        apply_help = "Save settings and return to the matrix view."
-        close_help = "Cancel changes and return to the matrix view (Esc)."
+        default_help = "Restore profile and configuration values to defaults. [D]"
+        apply_help = "Save settings and return to the matrix view. [A]"
+        close_help = "Cancel changes and return to the matrix view. [C]/[Esc]"
 
         label_help_items.append((default_settings_button_rect, default_help))
         label_help_items.append((apply_button_rect, apply_help))
@@ -611,21 +666,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         elif token_field_rect.collidepoint(pos):
                             active_field = 4
                         elif default_settings_button_rect.collidepoint(pos):
-                            default_user_text, default_email_text, default_url_text, default_token_text = _load_default_profile_fields()
-                            if default_user_text:
-                                user_text = default_user_text
-                            if default_email_text:
-                                email_text = default_email_text
-                            if default_url_text:
-                                url_text = default_url_text
-                            if default_token_text:
-                                token_text = default_token_text
-                            year_text = str(default_year)
-                            force_push_enabled = False
-                            debug_enabled = False
-                            random_enabled = False
-                            highlight_year_bounds_enabled = False
-                            max_level_text = "8"
+                            _reset_settings_to_defaults()
                         elif apply_button_rect.collidepoint(pos):
                             try:
                                 applied_year = int(year_text)
@@ -733,6 +774,16 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             matrix_status = "Apply failed: year must be a number"
                             matrix_status_color = white
                             year_text = str(applied_year)
+                    elif active_field is None and event.key == pygame.K_d:
+                        _reset_settings_to_defaults()
+                    elif active_field is None and event.key == pygame.K_a:
+                        _apply_settings_panel()
+                        state = STATE_MATRIX
+                    elif active_field is None and event.key == pygame.K_c:
+                        _cancel_settings_panel()
+                        matrix_status = "Settings canceled"
+                        matrix_status_color = dark_gray
+                        state = STATE_MATRIX
                     elif event.key == pygame.K_BACKSPACE and active_field is not None:
                         _set_active_field_value(_get_active_field_value()[:-1])
                 elif event.type == pygame.TEXTINPUT and active_field is not None:
@@ -779,20 +830,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             elif token_field_rect.collidepoint(pos):
                                 active_field = 4
                             elif default_settings_button_rect.collidepoint(pos):
-                                default_user_text, default_email_text, default_url_text, default_token_text = _load_default_profile_fields()
-                                if default_user_text:
-                                    user_text = default_user_text
-                                if default_email_text:
-                                    email_text = default_email_text
-                                if default_url_text:
-                                    url_text = default_url_text
-                                if default_token_text:
-                                    token_text = default_token_text
-                                year_text = str(default_year)
-                                force_push_enabled = False
-                                debug_enabled = False
-                                random_enabled = False
-                                highlight_year_bounds_enabled = False
+                                _reset_settings_to_defaults()
                             elif apply_button_rect.collidepoint(pos):
                                 _apply_settings_panel()
                             elif close_button_rect.collidepoint(pos):
@@ -824,26 +862,12 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             continue
 
                         if new_button_rect.collidepoint((x, y)):
-                            marked.clear()
-                            save_marked_dates(marked, year, applied_file)
-                            matrix_status = "New matrix created"
-                            matrix_status_color = green
+                            _action_new_matrix()
                             drag_left_active = False
                             drag_right_active = False
                             drag_last_cell = None
                         elif random_button_rect.collidepoint((x, y)):
-                            if not random_enabled:
-                                matrix_status = "Random mode is off"
-                                matrix_status_color = white
-                            else:
-                                try:
-                                    marked = generate_random_marked_dates(applied_year, max_level=applied_max_level)
-                                    save_marked_dates(marked, applied_year, applied_file)
-                                    matrix_status = f"Random commits generated for {applied_year}"
-                                    matrix_status_color = green
-                                except Exception as exc:
-                                    matrix_status = f"Random failed: {exc}"
-                                    matrix_status_color = white
+                            _action_random_matrix()
                             drag_left_active = False
                             drag_right_active = False
                             drag_last_cell = None
@@ -900,9 +924,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             drag_right_active = False
                             drag_last_cell = None
                         elif default_button_rect.collidepoint((x, y)):
-                            marked = load_marked_dates("default-data.json")
-                            matrix_status = "Loaded default-data.json"
-                            matrix_status_color = green
+                            _action_load_default_matrix()
                             drag_left_active = False
                             drag_right_active = False
                             drag_last_cell = None
@@ -914,11 +936,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         elif settings_button_rect.collidepoint((x, y)):
                             _open_settings_panel()
                         elif template_button_rect.collidepoint((x, y)):
-                            template_panel_open = True
-                            settings_panel_open = False
-                            pygame.key.stop_text_input()
-                            matrix_status = "Template panel opened"
-                            matrix_status_color = green
+                            _open_template_panel()
                             drag_left_active = False
                             drag_right_active = False
                             drag_last_cell = None
@@ -992,6 +1010,14 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             active_field = (active_field + 1) % 6 if active_field is not None else 0
                         elif event.key == pygame.K_RETURN:
                             _apply_settings_panel()
+                        elif active_field is None and event.key == pygame.K_d:
+                            _reset_settings_to_defaults()
+                        elif active_field is None and event.key == pygame.K_a:
+                            _apply_settings_panel()
+                        elif active_field is None and event.key == pygame.K_c:
+                            _cancel_settings_panel()
+                            matrix_status = "Settings canceled"
+                            matrix_status_color = dark_gray
                         elif event.key == pygame.K_BACKSPACE and active_field is not None:
                             _set_active_field_value(_get_active_field_value()[:-1])
                         continue
@@ -1009,6 +1035,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             else:
                                 _load_template_slot(template_slot)
                             continue
+                        continue
 
                     template_slot = _template_slot_from_key(event.key)
                     if template_slot is not None:
@@ -1023,6 +1050,31 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         matrix_status = "Exiting..."
                         matrix_status_color = dark_gray
                         running = False
+                    elif event.key == pygame.K_n:
+                        _action_new_matrix()
+                        drag_left_active = False
+                        drag_right_active = False
+                        drag_last_cell = None
+                    elif event.key == pygame.K_t:
+                        _open_template_panel()
+                        drag_left_active = False
+                        drag_right_active = False
+                        drag_last_cell = None
+                    elif event.key == pygame.K_r:
+                        _action_random_matrix()
+                        drag_left_active = False
+                        drag_right_active = False
+                        drag_last_cell = None
+                    elif event.key == pygame.K_d:
+                        _action_load_default_matrix()
+                        drag_left_active = False
+                        drag_right_active = False
+                        drag_last_cell = None
+                    elif event.key == pygame.K_s:
+                        _open_settings_panel()
+                        drag_left_active = False
+                        drag_right_active = False
+                        drag_last_cell = None
                 elif event.type == pygame.TEXTINPUT and settings_panel_open and active_field is not None:
                     if event.text and event.text.isprintable():
                         _set_active_field_value(_get_active_field_value() + event.text)
@@ -1080,7 +1132,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         hover_date_text = hover_date.strftime("%A, %d %b")
                         hover_commits = str(marked.get((hover_week, hover_day), 0))
                         hover_axis_text = f"[{hover_day + 1}:{hover_week + 1}]"
-                        hover_guide_text = "Left click/drag to draw | Right click/drag to erase | Scroll to change year"
+                        hover_guide_text = "Left click to draw | Right click to erase."
             
             # Draw labels
             day_labels = [(0, "Sun"), (3, "Wed"), (6, "Sat")]
@@ -1127,18 +1179,18 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             if template_panel_open:
                 hover_guide_text = "1-5 load templates | Ctrl+1..5 save templates | Esc close"
             elif not hover_guide_text:
-                hover_guide_text = "1-5 load templates | Ctrl+1..5 save templates | Esc to exit"
+                hover_guide_text = "Click(drag) on the grid to draw | Scroll to change year."
 
             main_button_help_items: list[tuple[pygame.Rect, str]] = [
-                (new_button_rect, "Clear the current matrix and start a new one."),
-                (template_button_rect, "Open template panel. Shortcuts: 1-5 load, Ctrl+1..5 save."),
-                (random_button_rect, "Randomly fill the matrix using the current max commit level."),
-                (default_button_rect, "Load the default matrix data and profile settings."),
+                (new_button_rect, "Start a new matrix [N]."),
+                (template_button_rect, "Load [1-5] | Save [Ctrl]+[1-5] | Open template panel [T]."),
+                (random_button_rect, "Randomly fill the matrix using the current max commit level [R]."),
+                (default_button_rect, "Load the default matrix data and profile settings [D]."),
                 (deploy_button_rect, "Commit the current matrix to the local mock repository."),
                 (push_button_rect, "Push the current repository state to the remote origin."),
                 (archive_button_rect, "Archive the workspace repository into a saved archive."),
-                (settings_button_rect, "Open the settings panel to edit year, profile, and options."),
-                (exit_button_rect, "Save the current matrix and exit the application (Esc)."),
+                (settings_button_rect, "Open the settings panel to edit year, profile, and options [S]."),
+                (exit_button_rect, "Save the current matrix and exit the application [Esc]."),
             ]
 
             hovered_main_help = hover_guide_text
