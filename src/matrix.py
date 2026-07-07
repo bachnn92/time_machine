@@ -1101,12 +1101,28 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             
             # Draw cells
             highlight_positions: set[tuple[int, int]] = set()
+            tail_overflow_position: tuple[int, int] | None = None
+            tail_overflow_help_text = ""
             if highlight_year_bounds_enabled:
                 jan_1 = date(year, 1, 1)
                 dec_31 = date(year, 12, 31)
-                for dt in (jan_1, dec_31):
-                    week, day = year_grid_position(dt.year, dt.month, dt.day)
-                    highlight_positions.add((week, day))
+                jan_week, jan_day = year_grid_position(jan_1.year, jan_1.month, jan_1.day)
+                highlight_positions.add((jan_week, jan_day))
+
+                dec_week, dec_day = year_grid_position(dec_31.year, dec_31.month, dec_31.day)
+                mapped_dec = date_from_year_grid_position(year, dec_week, dec_day)
+                if mapped_dec is not None and mapped_dec.date() == dec_31:
+                    highlight_positions.add((dec_week, dec_day))
+                else:
+                    for week in range(matrix_columns - 1, -1, -1):
+                        for day in range(6, -1, -1):
+                            tail_date = date_from_year_grid_position(year, week, day)
+                            if tail_date is not None:
+                                tail_overflow_position = (week, day)
+                                break
+                        if tail_overflow_position is not None:
+                            break
+                    tail_overflow_help_text = "The tail (lastday of the year) exceeded this board"
 
             for day in range(7):
                 for week in range(matrix_columns):
@@ -1116,7 +1132,9 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                     color = level_colors[visual_level] if cell_date is not None else out_of_year_cell
                     rect = pygame.Rect(grid_x + week * cell_size, grid_y + day * cell_size, cell_size, cell_size)
                     pygame.draw.rect(screen, color, rect, border_radius=3)
-                    if cell_date is not None and (week, day) in highlight_positions:
+                    if cell_date is not None and tail_overflow_position == (week, day):
+                        pygame.draw.rect(screen, (255, 80, 80), rect, 2, border_radius=3)
+                    elif cell_date is not None and (week, day) in highlight_positions:
                         pygame.draw.rect(screen, (255, 220, 80), rect, 2, border_radius=3)
                     else:
                         pygame.draw.rect(screen, cell_border, rect, 1, border_radius=3)
@@ -1204,10 +1222,13 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             ]
 
             hovered_main_help = hover_guide_text
-            for button_rect, help_text in main_button_help_items:
-                if button_rect.collidepoint(pygame.mouse.get_pos()):
-                    hovered_main_help = help_text
-                    break
+            if tail_overflow_help_text:
+                hovered_main_help = tail_overflow_help_text
+            else:
+                for button_rect, help_text in main_button_help_items:
+                    if button_rect.collidepoint(pygame.mouse.get_pos()):
+                        hovered_main_help = help_text
+                        break
 
             _draw_matrix_help_box(hovered_main_help)
 
