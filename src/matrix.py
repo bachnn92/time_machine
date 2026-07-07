@@ -390,8 +390,6 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         label_help_items.append((_draw_settings_toggle("Year Ends", config_right_label_right_x, highlight_year_bounds_rect, highlight_year_bounds_enabled, label_on_right=True), "Highlight Jan 1 and Dec 31 cells on the grid."))
 
         help_box_rect = pygame.Rect(settings_panel_x + 20, settings_button_row_y, settings_button_row_x - settings_panel_x - 32, settings_button_height)
-        pygame.draw.rect(screen, (8, 8, 8), help_box_rect, border_radius=6)
-        pygame.draw.rect(screen, gray, help_box_rect, 1, border_radius=6)
 
         hovered_help = "Hover a setting label to view help."
         mouse_pos = pygame.mouse.get_pos()
