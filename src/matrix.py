@@ -49,7 +49,8 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     # Fonts
     font = pygame.font.SysFont('monospace', 16)
     small_font = pygame.font.SysFont('monospace', 12)
-    year_font = pygame.font.SysFont('monospace', 28)
+    title_font = pygame.font.SysFont('monospace', 24, bold=True)
+    year_font = pygame.font.SysFont('monospace', 32, bold=True)
     
     # State machine
     STATE_SETTINGS = 0
@@ -963,22 +964,22 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 screen.blit(label_surface, (label_x, matrix_y + 5))
             
             # Title and instructions
-            title = font.render("Commit Graph Time Machine", True, green)
+            title = title_font.render("Commit Graph Time Machine", True, green)
             title_rect = title.get_rect(center=(matrix_center_x, 15))
             screen.blit(title, title_rect)
 
             year_value = year_font.render(str(year), True, green)
-            year_value_rect = year_value.get_rect(center=(matrix_center_x, 42))
+            year_value_rect = year_value.get_rect(center=(matrix_center_x, 50))
             screen.blit(year_value, year_value_rect)
             year_scroll_rect = year_value_rect.inflate(16, 8)
 
             if hover_date_text:
                 hover_date_surface = small_font.render(f"Date: {hover_date_text}", True, tip_green)
-                hover_date_rect = hover_date_surface.get_rect(center=(matrix_center_x, 66))
+                hover_date_rect = hover_date_surface.get_rect(center=(matrix_center_x, 74))
                 screen.blit(hover_date_surface, hover_date_rect)
                 
                 hover_commits_surface = small_font.render(f"Commits: {hover_commits}", True, tip_green)
-                hover_commits_rect = hover_commits_surface.get_rect(center=(matrix_center_x, 80))
+                hover_commits_rect = hover_commits_surface.get_rect(center=(matrix_center_x, 90))
                 screen.blit(hover_commits_surface, hover_commits_rect)
 
             new_button_color = green if new_button_rect.collidepoint(pygame.mouse.get_pos()) else white
