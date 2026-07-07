@@ -26,12 +26,14 @@ def year_grid_position(year: int, month: int, day: int) -> tuple[int, int]:
     """Map a date to matrix coordinates in a 7x53 Jan-1-anchored grid.
 
     Returns (week, day_index) where day_index is 0=Sun .. 6=Sat.
+
+    Week is clamped to 0..52 to fit a fixed 53-column matrix.
     """
     jan1 = datetime(year, 1, 1)
     first_day_index = day_of_week_index(year, 1, 1)
     day_offset = (datetime(year, month, day) - jan1).days
     cell_index = first_day_index + day_offset
-    return (cell_index // 7, cell_index % 7)
+    return (min(52, cell_index // 7), cell_index % 7)
 
 
 def date_from_year_grid_position(year: int, week: int, day_index: int) -> datetime | None:

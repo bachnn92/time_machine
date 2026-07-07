@@ -923,9 +923,16 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 text = small_font.render(day, True, white)
                 screen.blit(text, (matrix_x + 5, grid_y + i * cell_size + 2))
             
-            for week in range(0, matrix_columns, 4):
-                text = small_font.render(str(week), True, white)
-                screen.blit(text, (grid_x + week * cell_size + 2, matrix_y + 5))
+            month_labels: list[tuple[str, int]] = []
+            for month in range(1, 13):
+                month_date = date(year, month, 1)
+                month_week, _ = year_grid_position(year, month, 1)
+                month_labels.append((month_date.strftime("%b"), month_week))
+
+            for month_text, month_week in month_labels:
+                label_surface = small_font.render(month_text, True, white)
+                label_x = grid_x + month_week * cell_size + 2
+                screen.blit(label_surface, (label_x, matrix_y + 5))
             
             # Title and instructions
             title = font.render("Time Machine - Matrix", True, green)
