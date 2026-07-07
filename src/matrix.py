@@ -293,6 +293,35 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     def _matrix_status_rect() -> pygame.Rect:
         return pygame.Rect(screen_width // 2 - 410, screen_height - 86, 820, 38)
 
+    def _template_slot_from_key(key: int) -> int | None:
+        key_to_slot = {
+            pygame.K_1: 1,
+            pygame.K_2: 2,
+            pygame.K_3: 3,
+            pygame.K_4: 4,
+            pygame.K_5: 5,
+            pygame.K_KP1: 1,
+            pygame.K_KP2: 2,
+            pygame.K_KP3: 3,
+            pygame.K_KP4: 4,
+            pygame.K_KP5: 5,
+        }
+        return key_to_slot.get(key)
+
+    def _load_template_slot(slot: int) -> None:
+        nonlocal marked, matrix_status, matrix_status_color
+        template_filename = f"template-{slot}.json"
+        marked = load_marked_dates(template_filename)
+        matrix_status = f"Loaded {template_filename}"
+        matrix_status_color = green
+
+    def _save_template_slot(slot: int) -> None:
+        nonlocal matrix_status, matrix_status_color
+        template_filename = f"template-{slot}.json"
+        save_marked_dates(marked, year, template_filename)
+        matrix_status = f"Saved {template_filename}"
+        matrix_status_color = green
+
     def _draw_matrix_help_box(help_text: str) -> None:
         help_box_rect = pygame.Rect(screen_width // 2 - 300, row1_y - 52, 600, 34)
         if not help_text:
@@ -430,7 +459,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
 
         default_help = "Restore profile and configuration values to defaults."
         apply_help = "Save settings and return to the matrix view."
-        close_help = "Cancel changes and return to the matrix view."
+        close_help = "Cancel changes and return to the matrix view (Esc)."
 
         label_help_items.append((default_settings_button_rect, default_help))
         label_help_items.append((apply_button_rect, apply_help))
@@ -782,16 +811,12 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 matrix_status_color = dark_gray
                             else:
                                 for i in range(5):
-                                    template_filename = f"template-{i + 1}.json"
+                                    slot = i + 1
                                     if template_load_rects[i].collidepoint((x, y)):
-                                        marked = load_marked_dates(template_filename)
-                                        matrix_status = f"Loaded {template_filename}"
-                                        matrix_status_color = green
+                                        _load_template_slot(slot)
                                         break
                                     if template_save_rects[i].collidepoint((x, y)):
-                                        save_marked_dates(marked, year, template_filename)
-                                        matrix_status = f"Saved {template_filename}"
-                                        matrix_status_color = green
+                                        _save_template_slot(slot)
                                         break
                             drag_left_active = False
                             drag_right_active = False
@@ -971,13 +996,25 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             _set_active_field_value(_get_active_field_value()[:-1])
                         continue
 
-                    if event.key == pygame.K_ESCAPE:
-                        if template_panel_open:
+                    if template_panel_open:
+                        if event.key == pygame.K_ESCAPE:
                             template_panel_open = False
                             matrix_status = "Template panel closed"
                             matrix_status_color = dark_gray
                             continue
-                        _open_settings_panel()
+                        template_slot = _template_slot_from_key(event.key)
+                        if template_slot is not None:
+                            if event.mod & pygame.KMOD_CTRL:
+                                _save_template_slot(template_slot)
+                            else:
+                                _load_template_slot(template_slot)
+                            continue
+
+                    if event.key == pygame.K_ESCAPE:
+                        save_marked_dates(marked, year, applied_file)
+                        matrix_status = "Exiting..."
+                        matrix_status_color = dark_gray
+                        running = False
                 elif event.type == pygame.TEXTINPUT and settings_panel_open and active_field is not None:
                     if event.text and event.text.isprintable():
                         _set_active_field_value(_get_active_field_value() + event.text)
@@ -1035,7 +1072,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         hover_date_text = hover_date.strftime("%A, %d %b")
                         hover_commits = str(marked.get((hover_week, hover_day), 0))
                         hover_axis_text = f"[{hover_day + 1}:{hover_week + 1}]"
-                        hover_guide_text = "Left click/drag to draw | Right click/drag to erase | Scroll to change year"
+                        hover_guide_text = "Left click/drag to draw | Right click/drag to erase | Scroll to change year | Esc to exit"
             
             # Draw labels
             day_labels = [(0, "Sun"), (3, "Wed"), (6, "Sat")]
@@ -1081,14 +1118,14 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
 
             main_button_help_items: list[tuple[pygame.Rect, str]] = [
                 (new_button_rect, "Clear the current matrix and start a new one."),
-                (template_button_rect, "Open the template panel to load or save matrix presets."),
+                (template_button_rect, "Open template panel (1-5 load, Ctrl+1..5 save while open)."),
                 (random_button_rect, "Randomly fill the matrix using the current max commit level."),
                 (default_button_rect, "Load the default matrix data and profile settings."),
                 (deploy_button_rect, "Commit the current matrix to the local mock repository."),
                 (push_button_rect, "Push the current repository state to the remote origin."),
                 (archive_button_rect, "Archive the workspace repository into a saved archive."),
                 (settings_button_rect, "Open the settings panel to edit year, profile, and options."),
-                (exit_button_rect, "Save the current matrix and exit the application."),
+                (exit_button_rect, "Save the current matrix and exit the application (Esc)."),
             ]
 
             hovered_main_help = hover_guide_text
@@ -1195,7 +1232,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                     save_text_rect = save_text.get_rect(center=template_save_rects[i].center)
                     screen.blit(save_text, save_text_rect)
 
-                panel_hint = small_font.render("Save or load the current matrix using 5 template slots", True, tip_green)
+                panel_hint = small_font.render("1-5 load templates | Ctrl+1..5 save templates | Esc close", True, tip_green)
                 screen.blit(panel_hint, (template_panel_rect.x + 24, template_panel_rect.bottom - 26))
 
             if settings_panel_open:
