@@ -920,6 +920,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
 
             hover_date_text = ""
             hover_commits = ""
+            hover_axis_text = ""
             mouse_x, mouse_y = pygame.mouse.get_pos()
             if grid_x <= mouse_x < grid_x + grid_width and grid_y <= mouse_y < grid_y + grid_height:
                 hover_week = (mouse_x - grid_x) // cell_size
@@ -929,6 +930,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                     if hover_date is not None:
                         hover_date_text = hover_date.strftime("%A, %d %b")
                         hover_commits = str(marked.get((hover_week, hover_day), 0))
+                        hover_axis_text = f"[{hover_day + 1}:{hover_week + 1}]"
             
             # Draw labels
             day_labels = [(0, "Sun"), (3, "Wed"), (6, "Sat")]
@@ -967,6 +969,10 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 hover_commits_surface = small_font.render(hover_commit_text, True, tip_green)
                 hover_commits_rect = hover_commits_surface.get_rect(center=(matrix_center_x, 90))
                 screen.blit(hover_commits_surface, hover_commits_rect)
+
+                hover_axis_surface = small_font.render(hover_axis_text, True, tip_green)
+                hover_axis_rect = hover_axis_surface.get_rect(center=(matrix_center_x, 106))
+                screen.blit(hover_axis_surface, hover_axis_rect)
 
             new_button_color = green if new_button_rect.collidepoint(pygame.mouse.get_pos()) else white
             pygame.draw.rect(screen, (14, 14, 14), new_button_rect, border_radius=6)
