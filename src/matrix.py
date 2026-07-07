@@ -417,29 +417,34 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         year_ends_label_rect = _draw_settings_toggle("Year Ends", config_right_label_right_x, highlight_year_bounds_rect, highlight_year_bounds_enabled, label_on_right=True)
         label_help_items.append((highlight_year_bounds_rect, year_ends_help))
 
+        default_help = "Restore profile and configuration values to defaults."
+        apply_help = "Save settings and return to the matrix view."
+        close_help = "Cancel changes and return to the matrix view."
+
+        label_help_items.append((default_settings_button_rect, default_help))
+        label_help_items.append((apply_button_rect, apply_help))
+        label_help_items.append((close_button_rect, close_help))
+
         help_box_rect = pygame.Rect(settings_panel_x + 20, settings_button_row_y, settings_button_row_x - settings_panel_x - 32, settings_button_height)
 
-        hovered_help = "Hover a textbox or checkbox to view help."
+        hovered_help = ""
         mouse_pos = pygame.mouse.get_pos()
         for label_rect, help_text in label_help_items:
             if label_rect.collidepoint(mouse_pos):
                 hovered_help = help_text
                 break
 
-        help_display = hovered_help
-        while small_font.size(help_display)[0] > help_box_rect.width - 16 and len(help_display) > 4:
-            help_display = help_display[:-4] + "..."
-        help_surface = small_font.render(help_display, True, tip_green)
-        help_surface_rect = help_surface.get_rect(midleft=(help_box_rect.x + 8, help_box_rect.centery))
-        screen.blit(help_surface, help_surface_rect)
+        if hovered_help:
+            help_display = hovered_help
+            while small_font.size(help_display)[0] > help_box_rect.width - 16 and len(help_display) > 4:
+                help_display = help_display[:-4] + "..."
+            help_surface = small_font.render(help_display, True, tip_green)
+            help_surface_rect = help_surface.get_rect(midleft=(help_box_rect.x + 8, help_box_rect.centery))
+            screen.blit(help_surface, help_surface_rect)
 
         _draw_settings_button(default_settings_button_rect, "DEFAULT")
         _draw_settings_button(apply_button_rect, "APPLY")
         _draw_settings_button(close_button_rect, close_label_text)
-
-        settings_hint = small_font.render("Enter to apply | Esc to cancel", True, tip_green)
-        settings_hint_rect = settings_hint.get_rect(center=(screen_width // 2, hint_center_y))
-        screen.blit(settings_hint, settings_hint_rect)
 
     def _open_settings_panel() -> None:
         nonlocal settings_panel_open, year_text, file_text, url_text
