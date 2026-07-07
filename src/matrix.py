@@ -290,6 +290,15 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         status_rect = status_surface.get_rect(midleft=(status_box_rect.x + 10, status_box_rect.centery))
         screen.blit(status_surface, status_rect)
 
+    def _draw_matrix_help_box(help_text: str) -> None:
+        help_box_rect = pygame.Rect(screen_width // 2 - 300, row1_y - 42, 600, 34)
+        pygame.draw.rect(screen, (8, 8, 8), help_box_rect, border_radius=6)
+        if not help_text:
+            return
+        help_surface = small_font.render(help_text[:96], True, tip_green)
+        help_rect = help_surface.get_rect(midleft=(help_box_rect.x + 10, help_box_rect.centery))
+        screen.blit(help_surface, help_rect)
+
     def _draw_settings_button(rect: pygame.Rect, text: str) -> None:
         hovered = rect.collidepoint(pygame.mouse.get_pos())
         fill_color = (18, 34, 24) if hovered else (8, 8, 8)
@@ -1065,6 +1074,26 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 hover_axis_surface = small_font.render(hover_axis_text, True, tip_green)
                 hover_axis_rect = hover_axis_surface.get_rect(center=(matrix_center_x, 106))
                 screen.blit(hover_axis_surface, hover_axis_rect)
+
+            main_button_help_items: list[tuple[pygame.Rect, str]] = [
+                (new_button_rect, "Clear the current matrix and start a new one."),
+                (template_button_rect, "Open the template panel to load or save matrix presets."),
+                (random_button_rect, "Randomly fill the matrix using the current max commit level."),
+                (default_button_rect, "Load the default matrix data and profile settings."),
+                (deploy_button_rect, "Commit the current matrix to the local mock repository."),
+                (push_button_rect, "Push the current repository state to the remote origin."),
+                (archive_button_rect, "Archive the workspace repository into a saved archive."),
+                (settings_button_rect, "Open the settings panel to edit year, profile, and options."),
+                (exit_button_rect, "Save the current matrix and exit the application."),
+            ]
+
+            hovered_main_help = ""
+            for button_rect, help_text in main_button_help_items:
+                if button_rect.collidepoint(pygame.mouse.get_pos()):
+                    hovered_main_help = help_text
+                    break
+
+            _draw_matrix_help_box(hovered_main_help)
 
             new_button_color = green if new_button_rect.collidepoint(pygame.mouse.get_pos()) else white
             pygame.draw.rect(screen, (14, 14, 14), new_button_rect, border_radius=6)
