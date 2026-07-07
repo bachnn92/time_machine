@@ -485,7 +485,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         label_help_items.append((token_field_rect, token_help))
 
         year_help = "Target year for the contribution matrix."
-        year_label_rect = _draw_settings_input("Year", config_left_label_right_x, year_field_rect, year_text, 0)
+        year_label_rect = _draw_settings_input("Current Year", config_left_label_right_x, year_field_rect, year_text, 0)
         label_help_items.append((year_field_rect, year_help))
 
         max_commit_help = "Maximum commit intensity level (1-8)."
@@ -493,11 +493,11 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         label_help_items.append((max_level_field_rect, max_commit_help))
 
         force_push_help = "Allow force-push when updating remote history."
-        force_push_label_rect = _draw_settings_toggle("Force Push", config_right_label_right_x, force_push_rect, force_push_enabled, label_on_right=True)
+        force_push_label_rect = _draw_settings_toggle("Allow Force Push", config_right_label_right_x, force_push_rect, force_push_enabled, label_on_right=True)
         label_help_items.append((force_push_rect, force_push_help))
 
         debug_help = "Enable verbose debug output for operations."
-        debug_label_rect = _draw_settings_toggle("Debug", config_right_label_right_x, debug_rect, debug_enabled, label_on_right=True)
+        debug_label_rect = _draw_settings_toggle("Debug Mode", config_right_label_right_x, debug_rect, debug_enabled, label_on_right=True)
         label_help_items.append((debug_rect, debug_help))
 
         drag_lock_help = "Lock drawing to click-only cells (disable click-drag editing)."
@@ -505,7 +505,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         label_help_items.append((drag_lock_rect, drag_lock_help))
 
         year_ends_help = "Highlight Jan 1 and Dec 31 cells on the grid."
-        year_ends_label_rect = _draw_settings_toggle("Year Ends", config_right_label_right_x, highlight_year_bounds_rect, highlight_year_bounds_enabled, label_on_right=True)
+        year_ends_label_rect = _draw_settings_toggle("Head and Tail", config_right_label_right_x, highlight_year_bounds_rect, highlight_year_bounds_enabled, label_on_right=True)
         label_help_items.append((highlight_year_bounds_rect, year_ends_help))
 
         default_help = "Restore profile and configuration values to defaults. [D]"
