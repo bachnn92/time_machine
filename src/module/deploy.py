@@ -194,7 +194,7 @@ def archive_workspace_repo(workspace_root: str | os.PathLike[str] | None = None)
         raise ValueError("Workspace repository does not exist")
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    archive_path = root / f"archive_{timestamp}.zip"
+    archive_path = root / f"artifact_{timestamp}.zip"
     if archive_path.exists():
         archive_path.unlink()
 

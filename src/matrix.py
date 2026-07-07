@@ -284,11 +284,14 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     def _draw_matrix_status_box() -> None:
         if not matrix_status:
             return
-        status_box_rect = pygame.Rect(screen_width // 2 - 240, screen_height - 86, 480, 38)
+        status_box_rect = pygame.Rect(screen_width // 2 - 410, screen_height - 86, 820, 38)
         pygame.draw.rect(screen, black, status_box_rect)
-        status_surface = small_font.render(matrix_status[:80], True, matrix_status_color)
+        status_surface = small_font.render(matrix_status, True, matrix_status_color)
         status_rect = status_surface.get_rect(center=status_box_rect.center)
         screen.blit(status_surface, status_rect)
+
+    def _matrix_status_rect() -> pygame.Rect:
+        return pygame.Rect(screen_width // 2 - 410, screen_height - 86, 820, 38)
 
     def _draw_matrix_help_box(help_text: str) -> None:
         help_box_rect = pygame.Rect(screen_width // 2 - 300, row1_y - 52, 600, 34)
@@ -825,10 +828,10 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 matrix_status_color = green
                                 # Repaint status box before starting push.
                                 _draw_matrix_status_box()
-                                pygame.display.update(pygame.Rect(screen_width // 2 - 240, screen_height - 86, 480, 38))
+                                pygame.display.update(_matrix_status_rect())
                                 pygame.event.pump()
                                 safe_remote_url = push_workspace_repo()
-                                matrix_status = f"Pushed to {safe_remote_url}"[:80]
+                                matrix_status = f"Pushed to {safe_remote_url}"
                                 matrix_status_color = green
                             except Exception as exc:
                                 reason = _extract_push_reject_reason(exc)
@@ -842,7 +845,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             matrix_status_color = green
                             # Force the status box to repaint before the long deploy task starts.
                             _draw_matrix_status_box()
-                            pygame.display.update(pygame.Rect(screen_width // 2 - 240, screen_height - 86, 480, 38))
+                            pygame.display.update(_matrix_status_rect())
                             pygame.event.pump()
                             try:
                                 repo_path, commit_total = deploy_mock_repo(marked, year, applied_file)
@@ -860,10 +863,10 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 matrix_status_color = green
                                 # Repaint status box before starting archive.
                                 _draw_matrix_status_box()
-                                pygame.display.update(pygame.Rect(screen_width // 2 - 240, screen_height - 86, 480, 38))
+                                pygame.display.update(_matrix_status_rect())
                                 pygame.event.pump()
                                 archive_path = archive_workspace_repo()
-                                matrix_status = f"Archived to {archive_path.name}"
+                                matrix_status = f"Artifact saved to {archive_path.resolve()}"
                                 matrix_status_color = green
                             except Exception as exc:
                                 matrix_status = f"Archive failed: {exc}"
