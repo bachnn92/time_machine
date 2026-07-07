@@ -309,10 +309,11 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         field_id: int,
         masked: bool = False,
         placeholder: str = "",
-    ) -> None:
+    ) -> pygame.Rect:
         label_surface = small_font.render(label, True, white)
         label_x_pos = label_right_x - label_surface.get_width()
-        screen.blit(label_surface, (label_x_pos, rect.y + 13))
+        label_y_pos = rect.y + 13
+        screen.blit(label_surface, (label_x_pos, label_y_pos))
         border_color = green if active_field == field_id else gray
         pygame.draw.rect(screen, (14, 14, 14), rect, border_radius=5)
         pygame.draw.rect(screen, border_color, rect, 2, border_radius=5)
@@ -324,6 +325,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         else:
             text_surface = small_font.render(placeholder, True, gray)
         screen.blit(text_surface, (rect.x + 10, rect.y + 13))
+        return pygame.Rect(label_x_pos, label_y_pos, label_surface.get_width(), label_surface.get_height())
 
     def _draw_settings_toggle(
         label: str,
@@ -331,18 +333,20 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         rect: pygame.Rect,
         enabled: bool,
         label_on_right: bool = False,
-    ) -> None:
+    ) -> pygame.Rect:
         label_surface = small_font.render(label, True, white)
         if label_on_right:
             label_x_pos = rect.right + 10
         else:
             label_x_pos = label_right_x - label_surface.get_width()
-        screen.blit(label_surface, (label_x_pos, rect.y + 8))
+        label_y_pos = rect.y + 8
+        screen.blit(label_surface, (label_x_pos, label_y_pos))
         pygame.draw.rect(screen, (14, 14, 14), rect, border_radius=4)
         pygame.draw.rect(screen, green if enabled else gray, rect, 2, border_radius=4)
         if enabled:
             mark_rect = rect.inflate(-10, -10)
             pygame.draw.rect(screen, green, mark_rect, border_radius=2)
+        return pygame.Rect(label_x_pos, label_y_pos, label_surface.get_width(), label_surface.get_height())
 
     def _draw_settings_form(panel_title_text: str, close_label_text: str, hint_center_y: int) -> None:
         panel_rect = pygame.Rect(settings_panel_x, settings_panel_y, settings_panel_width, settings_panel_height)
@@ -371,18 +375,37 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         profile_label_right_x = field_x - 12
         config_left_label_right_x = year_field_rect.x - 12
         config_right_label_right_x = force_push_rect.x - 12
+        label_help_items: list[tuple[pygame.Rect, str]] = []
 
-        _draw_settings_input("User", profile_label_right_x, user_field_rect, user_text, 2, placeholder="<user>")
-        _draw_settings_input("Email", profile_label_right_x, email_field_rect, email_text, 3)
-        _draw_settings_input("URL", profile_label_right_x, url_field_rect, url_text, 1, placeholder="<url>")
-        _draw_settings_input("Token", profile_label_right_x, token_field_rect, token_text, 4, masked=True, placeholder="<token>")
+        label_help_items.append((_draw_settings_input("User", profile_label_right_x, user_field_rect, user_text, 2, placeholder="<user>"), "Git author username used for commits."))
+        label_help_items.append((_draw_settings_input("Email", profile_label_right_x, email_field_rect, email_text, 3), "Git author email used for commits."))
+        label_help_items.append((_draw_settings_input("URL", profile_label_right_x, url_field_rect, url_text, 1, placeholder="<url>"), "Remote repository URL for push operations."))
+        label_help_items.append((_draw_settings_input("Token", profile_label_right_x, token_field_rect, token_text, 4, masked=True, placeholder="<token>"), "Access token used for authenticated git actions."))
 
-        _draw_settings_input("Year", config_left_label_right_x, year_field_rect, year_text, 0)
-        _draw_settings_input("Max Commit", config_left_label_right_x, max_level_field_rect, max_level_text, 5)
-        _draw_settings_toggle("Force Push", config_right_label_right_x, force_push_rect, force_push_enabled, label_on_right=True)
-        _draw_settings_toggle("Debug", config_right_label_right_x, debug_rect, debug_enabled, label_on_right=True)
-        _draw_settings_toggle("Random", config_right_label_right_x, random_rect, random_enabled, label_on_right=True)
-        _draw_settings_toggle("Year Ends", config_right_label_right_x, highlight_year_bounds_rect, highlight_year_bounds_enabled, label_on_right=True)
+        label_help_items.append((_draw_settings_input("Year", config_left_label_right_x, year_field_rect, year_text, 0), "Target year for the contribution matrix."))
+        label_help_items.append((_draw_settings_input("Max Commit", config_left_label_right_x, max_level_field_rect, max_level_text, 5), "Maximum commit intensity level (1-8)."))
+        label_help_items.append((_draw_settings_toggle("Force Push", config_right_label_right_x, force_push_rect, force_push_enabled, label_on_right=True), "Allow force-push when updating remote history."))
+        label_help_items.append((_draw_settings_toggle("Debug", config_right_label_right_x, debug_rect, debug_enabled, label_on_right=True), "Enable verbose debug output for operations."))
+        label_help_items.append((_draw_settings_toggle("Random", config_right_label_right_x, random_rect, random_enabled, label_on_right=True), "Allow RANDOM button to auto-fill commits."))
+        label_help_items.append((_draw_settings_toggle("Year Ends", config_right_label_right_x, highlight_year_bounds_rect, highlight_year_bounds_enabled, label_on_right=True), "Highlight Jan 1 and Dec 31 cells on the grid."))
+
+        help_box_rect = pygame.Rect(settings_panel_x + 20, settings_button_row_y, settings_button_row_x - settings_panel_x - 32, settings_button_height)
+        pygame.draw.rect(screen, (8, 8, 8), help_box_rect, border_radius=6)
+        pygame.draw.rect(screen, gray, help_box_rect, 1, border_radius=6)
+
+        hovered_help = "Hover a setting label to view help."
+        mouse_pos = pygame.mouse.get_pos()
+        for label_rect, help_text in label_help_items:
+            if label_rect.collidepoint(mouse_pos):
+                hovered_help = help_text
+                break
+
+        help_display = hovered_help
+        while small_font.size(help_display)[0] > help_box_rect.width - 16 and len(help_display) > 4:
+            help_display = help_display[:-4] + "..."
+        help_surface = small_font.render(help_display, True, tip_green)
+        help_surface_rect = help_surface.get_rect(midleft=(help_box_rect.x + 8, help_box_rect.centery))
+        screen.blit(help_surface, help_surface_rect)
 
         _draw_settings_button(default_settings_button_rect, "DEFAULT")
         _draw_settings_button(apply_button_rect, "APPLY")
