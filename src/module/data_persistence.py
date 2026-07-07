@@ -5,7 +5,7 @@ import os
 import subprocess
 from datetime import datetime
 
-from .daytime import day_of_week_index
+from .daytime import date_from_year_grid_position, year_grid_position
 
 
 def _clamp_level(level: int) -> int:
@@ -54,6 +54,7 @@ def _default_git_profile() -> dict:
         "force_push": False,
         "debug": False,
         "random": False,
+        "highlight_year_bounds": False,
     }
 
 
@@ -106,8 +107,7 @@ def load_marked_dates(filename: str = "data.json") -> dict[tuple[int, int], int]
         marked: dict[tuple[int, int], int] = {}
 
         for dt, level in load_commit_schedule(filename):
-            week = min(dt.isocalendar()[1] - 1, 51)
-            day = day_of_week_index(dt.year, dt.month, dt.day)
+            week, day = year_grid_position(dt.year, dt.month, dt.day)
             marked[(week, day)] = level
 
         return marked
@@ -128,13 +128,10 @@ def save_marked_dates(marked: dict[tuple[int, int], int], year: int, filename: s
         level = _clamp_level(level)
         if level <= 0:
             continue
-        # Convert to date: day_of_week 0=Sun, isocalendar day 1=Mon, 7=Sun
-        iso_day = 7 if day == 0 else day
-        try:
-            dt = datetime.fromisocalendar(year, week + 1, iso_day)
-            dates.append({"date": dt.isoformat(), "level": level})
-        except:
-            pass
+        dt = date_from_year_grid_position(year, week, day)
+        if dt is None:
+            continue
+        dates.append({"date": dt.isoformat(), "level": level})
     
     filepath = _get_filepath(filename)
     # Create parent directories if they don't exist
@@ -177,6 +174,7 @@ def load_git_profile(filename: str = "settings.json") -> dict:
         force_push_value = settings_data.get("force_push", False)
         debug_value = settings_data.get("debug", False)
         random_value = settings_data.get("random", False)
+        highlight_year_bounds_value = settings_data.get("highlight_year_bounds", False)
         try:
             year_value = int(year_value)
         except (TypeError, ValueError):
@@ -197,6 +195,7 @@ def load_git_profile(filename: str = "settings.json") -> dict:
             "force_push": bool(force_push_value),
             "debug": bool(debug_value),
             "random": bool(random_value),
+            "highlight_year_bounds": bool(highlight_year_bounds_value),
         }
     except:
         return defaults
@@ -212,6 +211,7 @@ def save_git_profile(
     force_push: bool = False,
     debug: bool = False,
     random: bool = False,
+    highlight_year_bounds: bool = False,
     filename: str = "settings.json",
 ) -> None:
     """Saves git profile and app settings to JSON file.
@@ -237,6 +237,7 @@ def save_git_profile(
             "force_push": bool(force_push),
             "debug": bool(debug),
             "random": bool(random),
+            "highlight_year_bounds": bool(highlight_year_bounds),
         },
     }
     

@@ -1,10 +1,13 @@
 
 """Pygame-based UI for the 8-bit commit matrix editor."""
 
+from datetime import date
+
 from .module.data_persistence import (
     load_marked_dates, save_marked_dates,
     load_git_config_profile, load_git_profile, save_git_profile
 )
+from .module.daytime import date_from_year_grid_position, year_grid_position
 from .module.deploy import archive_workspace_repo, deploy_mock_repo, push_workspace_repo
 from .module.matrix_logic import generate_commit_matrix, generate_random_marked_dates
 from .module.visualization import plot_matrix
@@ -41,6 +44,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     gray = (100, 100, 100)
     dark_gray = (50, 50, 50)
     cell_border = (35, 35, 35)
+    out_of_year_cell = (12, 12, 12)
     
     # Fonts
     font = pygame.font.SysFont('monospace', 16)
@@ -63,6 +67,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     applied_force_push = bool(git_profile.get("force_push", False))
     applied_debug = bool(git_profile.get("debug", False))
     applied_random = bool(git_profile.get("random", False))
+    applied_highlight_year_bounds = bool(git_profile.get("highlight_year_bounds", False))
     if not isinstance(applied_file, str) or not applied_file.strip():
         applied_file = filename
     if not isinstance(applied_url, str):
@@ -78,6 +83,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     force_push_enabled = applied_force_push
     debug_enabled = applied_debug
     random_enabled = applied_random
+    highlight_year_bounds_enabled = applied_highlight_year_bounds
     user_text = git_profile.get("user", git_profile.get("username", ""))
     email_text = git_profile.get("email", "")
     token_text = git_profile.get("token", "")
@@ -103,6 +109,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     force_push_rect = pygame.Rect(field_x, settings_panel_y + 292, 24, 24)
     debug_rect = pygame.Rect(field_x, settings_panel_y + 326, 24, 24)
     random_rect = pygame.Rect(field_x, settings_panel_y + 360, 24, 24)
+    highlight_year_bounds_rect = pygame.Rect(field_x, settings_panel_y + 394, 24, 24)
     settings_button_row_width = settings_button_width * 3 + 20 * 2
     settings_button_row_x = settings_panel_x + settings_panel_width - 20 - settings_button_row_width
     settings_button_row_y = settings_panel_y + settings_panel_height - 64
@@ -113,6 +120,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     # Matrix state variables
     matrix = None
     marked: dict[tuple[int, int], int] = {}
+    matrix_columns = 53
     cell_size = 14
     label_width = 40
     label_height = 20
@@ -255,7 +263,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
 
     def _open_settings_panel() -> None:
         nonlocal settings_panel_open, year_text, file_text, url_text
-        nonlocal force_push_enabled, debug_enabled, random_enabled
+        nonlocal force_push_enabled, debug_enabled, random_enabled, highlight_year_bounds_enabled
         nonlocal user_text, email_text, token_text, active_field
         nonlocal template_panel_open, matrix_status, matrix_status_color
         save_marked_dates(marked, year, applied_file)
@@ -274,11 +282,12 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         force_push_enabled = bool(git_profile_local.get("force_push", False))
         debug_enabled = bool(git_profile_local.get("debug", False))
         random_enabled = bool(git_profile_local.get("random", False))
+        highlight_year_bounds_enabled = bool(git_profile_local.get("highlight_year_bounds", False))
         active_field = None
 
     def _cancel_settings_panel() -> None:
         nonlocal settings_panel_open, year_text, file_text, url_text
-        nonlocal force_push_enabled, debug_enabled, random_enabled
+        nonlocal force_push_enabled, debug_enabled, random_enabled, highlight_year_bounds_enabled
         nonlocal user_text, email_text, token_text, active_field
         nonlocal matrix_status, matrix_status_color
         year_text = str(applied_year)
@@ -288,6 +297,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         force_push_enabled = bool(git_profile_local.get("force_push", False))
         debug_enabled = bool(git_profile_local.get("debug", False))
         random_enabled = bool(git_profile_local.get("random", False))
+        highlight_year_bounds_enabled = bool(git_profile_local.get("highlight_year_bounds", False))
         user_text = git_profile_local.get("user", git_profile_local.get("username", ""))
         email_text = git_profile_local.get("email", "")
         token_text = git_profile_local.get("token", "")
@@ -297,7 +307,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
 
     def _apply_settings_panel() -> bool:
         nonlocal applied_year, applied_url
-        nonlocal applied_force_push, applied_debug, applied_random
+        nonlocal applied_force_push, applied_debug, applied_random, applied_highlight_year_bounds
         nonlocal year, year_text, matrix, marked, settings_panel_open
         nonlocal matrix_status, matrix_status_color
         try:
@@ -306,6 +316,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             applied_force_push = force_push_enabled
             applied_debug = debug_enabled
             applied_random = random_enabled
+            applied_highlight_year_bounds = highlight_year_bounds_enabled
             year = applied_year
             save_git_profile(
                 user_text,
@@ -317,6 +328,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 force_push=force_push_enabled,
                 debug=debug_enabled,
                 random=random_enabled,
+                highlight_year_bounds=highlight_year_bounds_enabled,
             )
             matrix = generate_commit_matrix(applied_year)
             marked = load_marked_dates(applied_file)
@@ -355,6 +367,9 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         elif random_rect.collidepoint(pos):
                             random_enabled = not random_enabled
                             active_field = None
+                        elif highlight_year_bounds_rect.collidepoint(pos):
+                            highlight_year_bounds_enabled = not highlight_year_bounds_enabled
+                            active_field = None
                         elif url_field_rect.collidepoint(pos):
                             active_field = 1
                         elif user_field_rect.collidepoint(pos):
@@ -377,6 +392,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             force_push_enabled = False
                             debug_enabled = False
                             random_enabled = False
+                            highlight_year_bounds_enabled = False
                         elif apply_button_rect.collidepoint(pos):
                             try:
                                 applied_year = int(year_text)
@@ -384,6 +400,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 applied_force_push = force_push_enabled
                                 applied_debug = debug_enabled
                                 applied_random = random_enabled
+                                applied_highlight_year_bounds = highlight_year_bounds_enabled
                                 year = applied_year
                                 # Save git profile
                                 save_git_profile(
@@ -396,6 +413,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                     force_push=force_push_enabled,
                                     debug=debug_enabled,
                                     random=random_enabled,
+                                    highlight_year_bounds=highlight_year_bounds_enabled,
                                 )
                                 # Generate matrix and load marked dates
                                 matrix = generate_commit_matrix(applied_year)
@@ -416,6 +434,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             force_push_enabled = bool(git_profile.get("force_push", False))
                             debug_enabled = bool(git_profile.get("debug", False))
                             random_enabled = bool(git_profile.get("random", False))
+                            highlight_year_bounds_enabled = bool(git_profile.get("highlight_year_bounds", False))
                             user_text = git_profile.get("user", git_profile.get("username", ""))
                             email_text = git_profile.get("email", "")
                             token_text = git_profile.get("token", "")
@@ -435,6 +454,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         force_push_enabled = bool(git_profile.get("force_push", False))
                         debug_enabled = bool(git_profile.get("debug", False))
                         random_enabled = bool(git_profile.get("random", False))
+                        highlight_year_bounds_enabled = bool(git_profile.get("highlight_year_bounds", False))
                         user_text = git_profile.get("user", git_profile.get("username", ""))
                         email_text = git_profile.get("email", "")
                         token_text = git_profile.get("token", "")
@@ -452,6 +472,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             applied_force_push = force_push_enabled
                             applied_debug = debug_enabled
                             applied_random = random_enabled
+                            applied_highlight_year_bounds = highlight_year_bounds_enabled
                             year = applied_year
                             save_git_profile(
                                 user_text,
@@ -463,6 +484,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 force_push=force_push_enabled,
                                 debug=debug_enabled,
                                 random=random_enabled,
+                                highlight_year_bounds=highlight_year_bounds_enabled,
                             )
                             matrix = generate_commit_matrix(applied_year)
                             marked = load_marked_dates(applied_file)
@@ -481,7 +503,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         _set_active_field_value(_get_active_field_value() + event.text)
             
             elif state == STATE_MATRIX:
-                grid_width = 52 * cell_size
+                grid_width = matrix_columns * cell_size
                 grid_height = 7 * cell_size
                 matrix_width = label_width + grid_width
                 matrix_height = label_height + grid_height
@@ -506,6 +528,9 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             elif random_rect.collidepoint(pos):
                                 random_enabled = not random_enabled
                                 active_field = None
+                            elif highlight_year_bounds_rect.collidepoint(pos):
+                                highlight_year_bounds_enabled = not highlight_year_bounds_enabled
+                                active_field = None
                             elif url_field_rect.collidepoint(pos):
                                 active_field = 1
                             elif user_field_rect.collidepoint(pos):
@@ -528,6 +553,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 force_push_enabled = False
                                 debug_enabled = False
                                 random_enabled = False
+                                highlight_year_bounds_enabled = False
                             elif apply_button_rect.collidepoint(pos):
                                 _apply_settings_panel()
                             elif close_button_rect.collidepoint(pos):
@@ -664,7 +690,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         elif grid_x <= x < grid_x + grid_width and grid_y <= y < grid_y + grid_height:
                             week = (x - grid_x) // cell_size
                             day = (y - grid_y) // cell_size
-                            if 0 <= week < 52 and 0 <= day < 7:
+                            if 0 <= week < matrix_columns and 0 <= day < 7 and date_from_year_grid_position(year, week, day) is not None:
                                 pos = (week, day)
                                 new_level = min(marked.get(pos, 0) + 1, 4)
                                 marked[pos] = new_level
@@ -676,7 +702,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         if grid_x <= x < grid_x + grid_width and grid_y <= y < grid_y + grid_height:
                             week = (x - grid_x) // cell_size
                             day = (y - grid_y) // cell_size
-                            if 0 <= week < 52 and 0 <= day < 7:
+                            if 0 <= week < matrix_columns and 0 <= day < 7 and date_from_year_grid_position(year, week, day) is not None:
                                 pos = (week, day)
                                 marked.pop(pos, None)
                                 drag_right_active = True
@@ -713,7 +739,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                     if grid_x <= x < grid_x + grid_width and grid_y <= y < grid_y + grid_height:
                         week = (x - grid_x) // cell_size
                         day = (y - grid_y) // cell_size
-                        if 0 <= week < 52 and 0 <= day < 7:
+                        if 0 <= week < matrix_columns and 0 <= day < 7 and date_from_year_grid_position(year, week, day) is not None:
                             pos = (week, day)
                             if pos != drag_last_cell:
                                 if drag_left_active:
@@ -850,7 +876,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         
         elif state == STATE_MATRIX:
             # Draw matrix screen
-            grid_width = 52 * cell_size
+            grid_width = matrix_columns * cell_size
             grid_height = 7 * cell_size
             matrix_width = label_width + grid_width
             matrix_height = label_height + grid_height
@@ -861,13 +887,35 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             grid_y = matrix_y + label_height
             
             # Draw cells
+            highlight_positions: set[tuple[int, int]] = set()
+            if highlight_year_bounds_enabled:
+                jan_1 = date(year, 1, 1)
+                dec_31 = date(year, 12, 31)
+                for dt in (jan_1, dec_31):
+                    week, day = year_grid_position(dt.year, dt.month, dt.day)
+                    highlight_positions.add((week, day))
+
             for day in range(7):
-                for week in range(52):
+                for week in range(matrix_columns):
+                    cell_date = date_from_year_grid_position(year, week, day)
                     level = marked.get((week, day), 0)
-                    color = level_colors[level]
+                    color = level_colors[level] if cell_date is not None else out_of_year_cell
                     rect = pygame.Rect(grid_x + week * cell_size, grid_y + day * cell_size, cell_size, cell_size)
                     pygame.draw.rect(screen, color, rect)
-                    pygame.draw.rect(screen, cell_border, rect, 1)
+                    if cell_date is not None and (week, day) in highlight_positions:
+                        pygame.draw.rect(screen, (255, 220, 80), rect, 2)
+                    else:
+                        pygame.draw.rect(screen, cell_border, rect, 1)
+
+            hover_date_text = ""
+            mouse_x, mouse_y = pygame.mouse.get_pos()
+            if grid_x <= mouse_x < grid_x + grid_width and grid_y <= mouse_y < grid_y + grid_height:
+                hover_week = (mouse_x - grid_x) // cell_size
+                hover_day = (mouse_y - grid_y) // cell_size
+                if 0 <= hover_week < matrix_columns and 0 <= hover_day < 7:
+                    hover_date = date_from_year_grid_position(year, hover_week, hover_day)
+                    if hover_date is not None:
+                        hover_date_text = hover_date.strftime("%d %b")
             
             # Draw labels
             days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
@@ -875,7 +923,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 text = small_font.render(day, True, white)
                 screen.blit(text, (matrix_x + 5, grid_y + i * cell_size + 2))
             
-            for week in range(0, 52, 4):
+            for week in range(0, matrix_columns, 4):
                 text = small_font.render(str(week), True, white)
                 screen.blit(text, (grid_x + week * cell_size + 2, matrix_y + 5))
             
@@ -888,6 +936,11 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             year_value_rect = year_value.get_rect(center=(matrix_center_x, 42))
             screen.blit(year_value, year_value_rect)
             year_scroll_rect = year_value_rect.inflate(16, 8)
+
+            if hover_date_text:
+                hover_date_surface = small_font.render(f"Date: {hover_date_text}", True, tip_green)
+                hover_date_rect = hover_date_surface.get_rect(center=(matrix_center_x, 66))
+                screen.blit(hover_date_surface, hover_date_rect)
 
             new_button_color = green if new_button_rect.collidepoint(pygame.mouse.get_pos()) else white
             pygame.draw.rect(screen, new_button_color, new_button_rect, 2)
@@ -1042,6 +1095,22 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                     random_mark = small_font.render("X", True, green)
                     random_mark_rect = random_mark.get_rect(center=random_rect.center)
                     screen.blit(random_mark, random_mark_rect)
+
+                highlight_year_bounds_label = small_font.render("Highlight Year Ends:", True, white)
+                screen.blit(highlight_year_bounds_label, (label_x, highlight_year_bounds_rect.y + 8))
+                pygame.draw.rect(screen, green if highlight_year_bounds_enabled else gray, highlight_year_bounds_rect, 2)
+                if highlight_year_bounds_enabled:
+                    highlight_mark = small_font.render("X", True, green)
+                    highlight_mark_rect = highlight_mark.get_rect(center=highlight_year_bounds_rect.center)
+                    screen.blit(highlight_mark, highlight_mark_rect)
+
+                highlight_year_bounds_label = small_font.render("Highlight Year Ends:", True, white)
+                screen.blit(highlight_year_bounds_label, (label_x, highlight_year_bounds_rect.y + 8))
+                pygame.draw.rect(screen, green if highlight_year_bounds_enabled else gray, highlight_year_bounds_rect, 2)
+                if highlight_year_bounds_enabled:
+                    highlight_mark = small_font.render("X", True, green)
+                    highlight_mark_rect = highlight_mark.get_rect(center=highlight_year_bounds_rect.center)
+                    screen.blit(highlight_mark, highlight_mark_rect)
 
                 url_label = small_font.render("URL:", True, white)
                 screen.blit(url_label, (profile_label_x, url_field_rect.y + 13))
