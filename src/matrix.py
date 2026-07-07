@@ -1010,6 +1010,14 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 _load_template_slot(template_slot)
                             continue
 
+                    template_slot = _template_slot_from_key(event.key)
+                    if template_slot is not None:
+                        if event.mod & pygame.KMOD_CTRL:
+                            _save_template_slot(template_slot)
+                        else:
+                            _load_template_slot(template_slot)
+                        continue
+
                     if event.key == pygame.K_ESCAPE:
                         save_marked_dates(marked, year, applied_file)
                         matrix_status = "Exiting..."
@@ -1063,7 +1071,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             hover_axis_text = ""
             hover_guide_text = ""
             mouse_x, mouse_y = pygame.mouse.get_pos()
-            if grid_x <= mouse_x < grid_x + grid_width and grid_y <= mouse_y < grid_y + grid_height:
+            if not template_panel_open and grid_x <= mouse_x < grid_x + grid_width and grid_y <= mouse_y < grid_y + grid_height:
                 hover_week = (mouse_x - grid_x) // cell_size
                 hover_day = (mouse_y - grid_y) // cell_size
                 if 0 <= hover_week < matrix_columns and 0 <= hover_day < 7:
@@ -1072,7 +1080,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         hover_date_text = hover_date.strftime("%A, %d %b")
                         hover_commits = str(marked.get((hover_week, hover_day), 0))
                         hover_axis_text = f"[{hover_day + 1}:{hover_week + 1}]"
-                        hover_guide_text = "Left click/drag to draw | Right click/drag to erase | Scroll to change year | Esc to exit"
+                        hover_guide_text = "Left click/drag to draw | Right click/drag to erase | Scroll to change year"
             
             # Draw labels
             day_labels = [(0, "Sun"), (3, "Wed"), (6, "Sat")]
@@ -1116,9 +1124,14 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 hover_axis_rect = hover_axis_surface.get_rect(center=(matrix_center_x, 106))
                 screen.blit(hover_axis_surface, hover_axis_rect)
 
+            if template_panel_open:
+                hover_guide_text = "1-5 load templates | Ctrl+1..5 save templates | Esc close"
+            elif not hover_guide_text:
+                hover_guide_text = "1-5 load templates | Ctrl+1..5 save templates | Esc to exit"
+
             main_button_help_items: list[tuple[pygame.Rect, str]] = [
                 (new_button_rect, "Clear the current matrix and start a new one."),
-                (template_button_rect, "Open template panel (1-5 load, Ctrl+1..5 save while open)."),
+                (template_button_rect, "Open template panel. Shortcuts: 1-5 load, Ctrl+1..5 save."),
                 (random_button_rect, "Randomly fill the matrix using the current max commit level."),
                 (default_button_rect, "Load the default matrix data and profile settings."),
                 (deploy_button_rect, "Commit the current matrix to the local mock repository."),
