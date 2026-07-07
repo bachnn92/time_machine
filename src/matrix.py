@@ -39,8 +39,8 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     # Colors
     black = (0, 0, 0)
     white = (255, 255, 255)
-    green = (0, 255, 0)
-    tip_green = (70, 200, 90)
+    green = (38, 228, 118)
+    tip_green = (38, 228, 118)
     gray = (100, 100, 100)
     dark_gray = (50, 50, 50)
     cell_border = (35, 35, 35)
@@ -172,14 +172,14 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     ]
     level_colors = [
         black,
-        (0, 50, 0),
-        (0, 80, 0),
-        (0, 110, 0),
-        (0, 140, 0),
-        (0, 170, 0),
-        (0, 200, 0),
-        (0, 230, 0),
-        (0, 255, 0),
+        (10, 57, 30),
+        (19, 114, 59),
+        (29, 171, 88),
+        (33, 200, 103),
+        (38, 228, 118),
+        (38, 228, 118),
+        (38, 228, 118),
+        (38, 228, 118),
     ]
 
     drag_left_active = False
@@ -924,7 +924,8 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 for week in range(matrix_columns):
                     cell_date = date_from_year_grid_position(year, week, day)
                     level = marked.get((week, day), 0)
-                    color = level_colors[level] if cell_date is not None else out_of_year_cell
+                    visual_level = min(max(level, 0), 5)
+                    color = level_colors[visual_level] if cell_date is not None else out_of_year_cell
                     rect = pygame.Rect(grid_x + week * cell_size, grid_y + day * cell_size, cell_size, cell_size)
                     pygame.draw.rect(screen, color, rect)
                     if cell_date is not None and (week, day) in highlight_positions:
