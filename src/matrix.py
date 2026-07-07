@@ -338,7 +338,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             matrix_status_color = green
         except Exception as exc:
             matrix_status = f"Random failed: {exc}"
-            matrix_status_color = white
+            matrix_status_color = (255, 80, 80)
 
     def _action_load_default_matrix() -> None:
         nonlocal marked, matrix_status, matrix_status_color
@@ -373,11 +373,11 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         highlight_year_bounds_enabled = False
         max_level_text = "8"
 
-    def _draw_matrix_help_box(help_text: str) -> None:
+    def _draw_matrix_help_box(help_text: str, color: tuple[int, int, int] = tip_green) -> None:
         help_box_rect = pygame.Rect(screen_width // 2 - 300, row1_y - 52, 600, 34)
         if not help_text:
             return
-        help_surface = small_font.render(help_text[:96], True, tip_green)
+        help_surface = small_font.render(help_text[:96], True, color)
         help_rect = help_surface.get_rect(center=help_box_rect.center)
         screen.blit(help_surface, help_rect)
 
@@ -620,7 +620,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             return True
         except ValueError:
             matrix_status = "Apply failed: year must be a number"
-            matrix_status_color = white
+            matrix_status_color = (255, 80, 80)
             year_text = str(applied_year)
             return False
 
@@ -696,7 +696,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 state = STATE_MATRIX
                             except ValueError:
                                 matrix_status = "Apply failed: year must be a number"
-                                matrix_status_color = white
+                                matrix_status_color = (255, 80, 80)
                                 year_text = str(applied_year)
                         elif close_button_rect.collidepoint(pos):
                             # Return to matrix and discard unsaved settings edits
@@ -768,7 +768,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             state = STATE_MATRIX
                         except ValueError:
                             matrix_status = "Apply failed: year must be a number"
-                            matrix_status_color = white
+                            matrix_status_color = (255, 80, 80)
                             year_text = str(applied_year)
                     elif active_field is None and event.key == pygame.K_d:
                         _reset_settings_to_defaults()
@@ -881,7 +881,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             except Exception as exc:
                                 reason = _extract_push_reject_reason(exc)
                                 matrix_status = f"Push failed: {reason}"
-                                matrix_status_color = white
+                                matrix_status_color = (255, 80, 80)
                             drag_left_active = False
                             drag_right_active = False
                             drag_last_cell = None
@@ -898,7 +898,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 matrix_status_color = green
                             except Exception as exc:
                                 matrix_status = f"Commit failed: {exc}"
-                                matrix_status_color = white
+                                matrix_status_color = (255, 80, 80)
                             drag_left_active = False
                             drag_right_active = False
                             drag_last_cell = None
@@ -915,7 +915,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 matrix_status_color = green
                             except Exception as exc:
                                 matrix_status = f"Archive failed: {exc}"
-                                matrix_status_color = white
+                                matrix_status_color = (255, 80, 80)
                             drag_left_active = False
                             drag_right_active = False
                             drag_last_cell = None
@@ -1230,7 +1230,10 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         hovered_main_help = help_text
                         break
 
-            _draw_matrix_help_box(hovered_main_help)
+            _draw_matrix_help_box(
+                hovered_main_help,
+                (255, 80, 80) if tail_overflow_help_text else tip_green,
+            )
 
             new_button_color = green if new_button_rect.collidepoint(pygame.mouse.get_pos()) else white
             pygame.draw.rect(screen, (14, 14, 14), new_button_rect, border_radius=6)
