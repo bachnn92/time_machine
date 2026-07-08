@@ -171,7 +171,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     row_gap = 14
     row1_total_width = row1_count * button_width + (row1_count - 1) * button_gap
     row1_x = (screen_width - row1_total_width) // 2
-    row1_y = screen_height - 224
+    row1_y = screen_height - 196
     row2_y = row1_y + button_height + row_gap
     row3_y = row2_y + button_height + row_gap
     row2_total_width = button_width * 4 + button_gap * 3
@@ -211,16 +211,17 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     services_repo_field_rect = pygame.Rect(services_field_x, services_panel_rect.y + 158, services_field_width, 30)
     services_token_field_rect = pygame.Rect(services_field_x, services_panel_rect.y + 192, services_field_width, 30)
     services_visible_text_chars = max(30, (services_field_width - 30) // 8)
+    template_slot_count = 9
     template_load_rects = [
         pygame.Rect(template_panel_x + 240, template_panel_y + 58 + i * 42, 86, 30)
         for i, (template_panel_x, template_panel_y) in enumerate(
-            [(template_panel_rect.x, template_panel_rect.y)] * 5
+            [(template_panel_rect.x, template_panel_rect.y)] * template_slot_count
         )
     ]
     template_save_rects = [
         pygame.Rect(template_panel_x + 338, template_panel_y + 58 + i * 42, 86, 30)
         for i, (template_panel_x, template_panel_y) in enumerate(
-            [(template_panel_rect.x, template_panel_rect.y)] * 5
+            [(template_panel_rect.x, template_panel_rect.y)] * template_slot_count
         )
     ]
     level_colors = [
@@ -386,14 +387,14 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     def _draw_matrix_status_box() -> None:
         if not matrix_status:
             return
-        status_box_rect = pygame.Rect(screen_width // 2 - 410, screen_height - 86, 820, 38)
+        status_box_rect = pygame.Rect(screen_width // 2 - 410, screen_height - 66, 820, 38)
         pygame.draw.rect(screen, black, status_box_rect)
         status_surface = small_font.render(matrix_status, True, matrix_status_color)
         status_rect = status_surface.get_rect(center=status_box_rect.center)
         screen.blit(status_surface, status_rect)
 
     def _matrix_status_rect() -> pygame.Rect:
-        return pygame.Rect(screen_width // 2 - 410, screen_height - 86, 820, 38)
+        return pygame.Rect(screen_width // 2 - 410, screen_height - 66, 820, 38)
 
     def _template_slot_from_key(key: int) -> int | None:
         key_to_slot = {
@@ -402,11 +403,19 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             pygame.K_3: 3,
             pygame.K_4: 4,
             pygame.K_5: 5,
+            pygame.K_6: 6,
+            pygame.K_7: 7,
+            pygame.K_8: 8,
+            pygame.K_9: 9,
             pygame.K_KP1: 1,
             pygame.K_KP2: 2,
             pygame.K_KP3: 3,
             pygame.K_KP4: 4,
             pygame.K_KP5: 5,
+            pygame.K_KP6: 6,
+            pygame.K_KP7: 7,
+            pygame.K_KP8: 8,
+            pygame.K_KP9: 9,
         }
         return key_to_slot.get(key)
 
@@ -609,7 +618,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         max_level_text = "8"
 
     def _draw_matrix_help_box(help_text: str, color: tuple[int, int, int] = tip_green) -> None:
-        help_box_rect = pygame.Rect(screen_width // 2 - 300, row1_y - 52, 600, 34)
+        help_box_rect = pygame.Rect(screen_width // 2 - 300, row1_y - 48, 600, 34)
         if not help_text:
             return
         help_surface = small_font.render(help_text[:96], True, color)
@@ -1170,7 +1179,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 matrix_status = "Template panel closed"
                                 matrix_status_color = dark_gray
                             else:
-                                for i in range(5):
+                                for i in range(template_slot_count):
                                     slot = i + 1
                                     if template_load_rects[i].collidepoint((x, y)):
                                         _load_template_slot(slot)
@@ -1509,6 +1518,12 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             matrix_center_x = matrix_x + matrix_width // 2
             grid_x = matrix_x + label_width
             grid_y = matrix_y + label_height
+
+            panel_rect = pygame.Rect(matrix_x - 16, matrix_y - 16, matrix_width + 32, matrix_height + 58)
+            shadow_rect = panel_rect.move(6, 6)
+            pygame.draw.rect(screen, (6, 6, 6), shadow_rect, border_radius=12)
+            pygame.draw.rect(screen, (12, 16, 14), panel_rect, border_radius=12)
+            pygame.draw.rect(screen, white, panel_rect, 2, border_radius=12)
             
             # Draw cells
             highlight_positions: set[tuple[int, int]] = set()
@@ -1612,7 +1627,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 screen.blit(hover_axis_surface, hover_axis_rect)
 
             if template_panel_open:
-                hover_guide_text = "1-5 load templates | Ctrl+1..5 save templates | Esc close"
+                hover_guide_text = "1-9 load templates | Ctrl+1..9 save templates | Esc close"
             elif services_panel_open:
                 hover_guide_text = "Check, create, or delete repos from the services panel | Esc close"
             elif not hover_guide_text:
@@ -1623,7 +1638,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
 
             main_button_help_items: list[tuple[pygame.Rect, str]] = [
                 (new_button_rect, "Start a new matrix [N]."),
-                (template_button_rect, "Load [1-5] | Save [Ctrl]+[1-5] | Open template panel [T]."),
+                (template_button_rect, "Load [1-9] | Save [Ctrl]+[1-9] | Open template panel [T]."),
                 (random_button_rect, "Randomly fill the matrix using the current max commit level [R]."),
                 (default_button_rect, "Load the default matrix data and profile settings [D]."),
                 (deploy_button_rect, "Commit the current matrix to the local mock repository."),
@@ -1746,7 +1761,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 close_text_rect = close_text.get_rect(center=template_close_rect.center)
                 screen.blit(close_text, close_text_rect)
 
-                for i in range(5):
+                for i in range(template_slot_count):
                     slot_label = small_font.render(f"Template {i + 1}", True, white)
                     screen.blit(slot_label, (template_panel_rect.x + 24, template_panel_rect.y + 68 + i * 42))
 
@@ -1764,7 +1779,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                     save_text_rect = save_text.get_rect(center=template_save_rects[i].center)
                     screen.blit(save_text, save_text_rect)
 
-                panel_hint = small_font.render("1-5 load templates | Ctrl+1..5 save templates | Esc close", True, tip_green)
+                panel_hint = small_font.render("1-9 load templates | Ctrl+1..9 save templates | Esc close", True, tip_green)
                 screen.blit(panel_hint, (template_panel_rect.x + 24, template_panel_rect.bottom - 26))
 
             if services_panel_open:
