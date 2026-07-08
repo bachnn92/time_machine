@@ -195,7 +195,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     settings_panel_open = False
     template_panel_open = False
     services_panel_open = False
-    template_panel_rect = pygame.Rect(screen_width // 2 - 230, screen_height // 2 - 150, 460, 300)
+    template_panel_rect = pygame.Rect(screen_width // 2 - 260, screen_height // 2 - 215, 520, 430)
     template_close_rect = pygame.Rect(template_panel_rect.right - 110, template_panel_rect.y + 16, 86, 30)
     services_panel_rect = pygame.Rect(screen_width // 2 - 260, screen_height // 2 - 170, 520, 340)
     services_close_rect = pygame.Rect(services_panel_rect.right - 110, services_panel_rect.y + 16, 86, 30)
@@ -212,17 +212,17 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     services_token_field_rect = pygame.Rect(services_field_x, services_panel_rect.y + 192, services_field_width, 30)
     services_visible_text_chars = max(30, (services_field_width - 30) // 8)
     template_slot_count = 9
+    template_row_height = 40
+    template_label_x = template_panel_rect.x + 24
+    template_load_x = template_panel_rect.x + 280
+    template_save_x = template_panel_rect.x + 378
     template_load_rects = [
-        pygame.Rect(template_panel_x + 240, template_panel_y + 58 + i * 42, 86, 30)
-        for i, (template_panel_x, template_panel_y) in enumerate(
-            [(template_panel_rect.x, template_panel_rect.y)] * template_slot_count
-        )
+        pygame.Rect(template_load_x, template_panel_rect.y + 68 + i * template_row_height, 86, 30)
+        for i in range(template_slot_count)
     ]
     template_save_rects = [
-        pygame.Rect(template_panel_x + 338, template_panel_y + 58 + i * 42, 86, 30)
-        for i, (template_panel_x, template_panel_y) in enumerate(
-            [(template_panel_rect.x, template_panel_rect.y)] * template_slot_count
-        )
+        pygame.Rect(template_save_x, template_panel_rect.y + 68 + i * template_row_height, 86, 30)
+        for i in range(template_slot_count)
     ]
     level_colors = [
         available_cell,
@@ -1763,7 +1763,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
 
                 for i in range(template_slot_count):
                     slot_label = small_font.render(f"Template {i + 1}", True, white)
-                    screen.blit(slot_label, (template_panel_rect.x + 24, template_panel_rect.y + 68 + i * 42))
+                    screen.blit(slot_label, (template_label_x, template_panel_rect.y + 74 + i * template_row_height))
 
                     load_color = green if template_load_rects[i].collidepoint(pygame.mouse.get_pos()) else white
                     pygame.draw.rect(screen, (14, 14, 14), template_load_rects[i], border_radius=6)
@@ -1778,9 +1778,6 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                     save_text = small_font.render("SAVE", True, save_color)
                     save_text_rect = save_text.get_rect(center=template_save_rects[i].center)
                     screen.blit(save_text, save_text_rect)
-
-                panel_hint = small_font.render("1-9 load templates | Ctrl+1..9 save templates | Esc close", True, tip_green)
-                screen.blit(panel_hint, (template_panel_rect.x + 24, template_panel_rect.bottom - 26))
 
             if services_panel_open:
                 services_shadow_rect = services_panel_rect.move(6, 6)
