@@ -1842,7 +1842,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                     "Time Machine is a compact matrix editor for planning and visualizing commit activity.",
                     "It helps you sketch contribution patterns, save reusable templates, and manage local repository workflows.",
                     "",
-                    "Author: Bach Nguyen Ngoc",
+                    "Author: Bach Nguyen Ngoc <bachnn92@gmail.com>",
                     "Organization: Cresential, Inc.",
                     "License: Proprietary",
                 ]
