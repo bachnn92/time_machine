@@ -10,6 +10,13 @@ from .module.data_persistence import (
 from .module.daytime import date_from_year_grid_position, year_grid_position
 from .module.deploy import archive_workspace_repo, deploy_mock_repo, push_workspace_repo
 from .module.matrix_logic import generate_commit_matrix, generate_random_marked_dates
+from .module.repo_services import (
+    check_repository,
+    create_repository,
+    delete_repository,
+    normalize_provider,
+    provider_defaults,
+)
 from .module.visualization import plot_matrix
 
 
@@ -96,6 +103,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     highlight_year_bounds_enabled = applied_highlight_year_bounds
     max_level_text = str(applied_max_level)
     user_text = git_profile.get("user", git_profile.get("username", ""))
+    owner_text = git_profile.get("owner", user_text)
     email_text = git_profile.get("email", "")
     token_text = git_profile.get("token", "")
     token_visible = False
@@ -165,7 +173,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     row1_y = screen_height - 224
     row2_y = row1_y + button_height + row_gap
     row3_y = row2_y + button_height + row_gap
-    row2_total_width = button_width * 3 + button_gap * 2
+    row2_total_width = button_width * 4 + button_gap * 3
     row2_x = (screen_width - row2_total_width) // 2
     row3_total_width = button_width * 2 + button_gap
     row3_x = (screen_width - row3_total_width) // 2
@@ -178,14 +186,30 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     deploy_button_rect = pygame.Rect(row2_x, row2_y, button_width, button_height)
     push_button_rect = pygame.Rect(row2_x + button_width + button_gap, row2_y, button_width, button_height)
     archive_button_rect = pygame.Rect(row2_x + (button_width + button_gap) * 2, row2_y, button_width, button_height)
+    services_button_rect = pygame.Rect(row2_x + (button_width + button_gap) * 3, row2_y, button_width, button_height)
 
     settings_button_rect = pygame.Rect(row3_x, row3_y, button_width, button_height)
     exit_button_rect = pygame.Rect(row3_x + button_width + button_gap, row3_y, button_width, button_height)
 
     settings_panel_open = False
     template_panel_open = False
+    services_panel_open = False
     template_panel_rect = pygame.Rect(screen_width // 2 - 230, screen_height // 2 - 150, 460, 300)
     template_close_rect = pygame.Rect(template_panel_rect.right - 110, template_panel_rect.y + 16, 86, 30)
+    services_panel_rect = pygame.Rect(screen_width // 2 - 260, screen_height // 2 - 170, 520, 340)
+    services_close_rect = pygame.Rect(services_panel_rect.right - 110, services_panel_rect.y + 16, 86, 30)
+    services_check_rect = pygame.Rect(services_panel_rect.x + 24, services_panel_rect.bottom - 62, 86, 30)
+    services_create_rect = pygame.Rect(services_check_rect.right + 12, services_panel_rect.bottom - 62, 86, 30)
+    services_delete_rect = pygame.Rect(services_create_rect.right + 12, services_panel_rect.bottom - 62, 86, 30)
+    services_label_right_x = services_panel_rect.x + 145
+    services_field_x = services_panel_rect.x + 160
+    services_field_width = services_panel_rect.width - 184
+    services_provider_field_rect = pygame.Rect(services_field_x, services_panel_rect.y + 56, services_field_width, 30)
+    services_base_url_field_rect = pygame.Rect(services_field_x, services_panel_rect.y + 90, services_field_width, 30)
+    services_owner_field_rect = pygame.Rect(services_field_x, services_panel_rect.y + 124, services_field_width, 30)
+    services_repo_field_rect = pygame.Rect(services_field_x, services_panel_rect.y + 158, services_field_width, 30)
+    services_token_field_rect = pygame.Rect(services_field_x, services_panel_rect.y + 192, services_field_width, 30)
+    services_visible_text_chars = max(30, (services_field_width - 30) // 8)
     template_load_rects = [
         pygame.Rect(template_panel_x + 240, template_panel_y + 58 + i * 42, 86, 30)
         for i, (template_panel_x, template_panel_y) in enumerate(
@@ -216,6 +240,12 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     year_scroll_rect = pygame.Rect(0, 0, 0, 0)
     matrix_status = ""
     matrix_status_color = dark_gray
+    services_provider_text = "github"
+    services_base_url_text = provider_defaults(services_provider_text)["base_url"]
+    services_owner_text = owner_text if isinstance(owner_text, str) else ""
+    services_repo_text = "time-machine"
+    services_token_text = token_text
+    services_active_field: int | None = None
     
     # Initialize matrix view immediately on app start.
     matrix = generate_commit_matrix(year)
@@ -416,6 +446,134 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         marked = load_marked_dates("default-data.json")
         matrix_status = "Loaded default-data.json"
         matrix_status_color = green
+
+    def _set_services_active_field(value: str) -> None:
+        nonlocal services_provider_text, services_base_url_text, services_owner_text, services_repo_text, services_token_text
+        if services_active_field == 0:
+            services_provider_text = value[:24].lower()
+        elif services_active_field == 1:
+            services_base_url_text = value[:200]
+        elif services_active_field == 2:
+            services_owner_text = value[:80]
+        elif services_active_field == 3:
+            services_repo_text = value[:80]
+        elif services_active_field == 4:
+            services_token_text = value[:200]
+
+    def _get_services_active_field() -> str:
+        if services_active_field == 0:
+            return services_provider_text
+        if services_active_field == 1:
+            return services_base_url_text
+        if services_active_field == 2:
+            return services_owner_text
+        if services_active_field == 3:
+            return services_repo_text
+        if services_active_field == 4:
+            return services_token_text
+        return ""
+
+    def _activate_services_field(field_id: int) -> None:
+        nonlocal services_active_field
+        services_active_field = field_id
+
+    def _open_services_panel() -> None:
+        nonlocal services_panel_open, template_panel_open, settings_panel_open, matrix_status, matrix_status_color
+        nonlocal services_provider_text, services_base_url_text, services_owner_text, services_repo_text, services_token_text
+        nonlocal services_active_field, active_field, owner_text
+        services_panel_open = True
+        template_panel_open = False
+        settings_panel_open = False
+        git_profile_local = load_git_profile()
+        services_provider_text = normalize_provider(services_provider_text) or "github"
+        services_base_url_text = services_base_url_text.strip() or provider_defaults(services_provider_text)["base_url"]
+        owner_text = git_profile_local.get("owner", owner_text if isinstance(owner_text, str) else "")
+        services_owner_text = services_owner_text.strip() or owner_text.strip() or (user_text.strip() if isinstance(user_text, str) else "")
+        services_repo_text = services_repo_text.strip() or "time-machine"
+        services_token_text = services_token_text.strip() or git_profile_local.get("token", token_text)
+        active_field = None
+        services_active_field = None
+        pygame.key.start_text_input()
+        matrix_status = "Repository services panel opened"
+        matrix_status_color = green
+
+    def _close_services_panel(message: str = "Repository services panel closed") -> None:
+        nonlocal services_panel_open, services_active_field, matrix_status, matrix_status_color, active_field
+        services_panel_open = False
+        services_active_field = None
+        active_field = None
+        pygame.key.stop_text_input()
+        matrix_status = message
+        matrix_status_color = dark_gray
+
+    def _run_service_action(action: str) -> None:
+        nonlocal matrix_status, matrix_status_color, owner_text, token_text
+        provider_value = normalize_provider(services_provider_text)
+        owner_value = services_owner_text.strip() or (user_text.strip() if isinstance(user_text, str) else "")
+        repo_value = services_repo_text.strip()
+        base_url_value = services_base_url_text.strip()
+        token_value = services_token_text.strip() or token_text.strip()
+        auth_user = user_text.strip() if isinstance(user_text, str) else ""
+        owner_text = owner_value
+        token_text = token_value
+        save_git_profile(
+            user_text,
+            email_text,
+            token_text,
+            owner=owner_text,
+            year=applied_year,
+            path=applied_file,
+            url=applied_url,
+            force_push=applied_force_push,
+            debug=applied_debug,
+            drag_lock=applied_drag_lock,
+            highlight_year_bounds=applied_highlight_year_bounds,
+            max_level=applied_max_level,
+        )
+        try:
+            if action == "check":
+                result = check_repository(provider_value, base_url_value, owner_value, repo_value, token=token_value, user=auth_user)
+                matrix_status = result.message
+                matrix_status_color = green if result.ok else (dark_gray if result.status_code == 404 else (255, 80, 80))
+            elif action == "create":
+                result = create_repository(provider_value, base_url_value, owner_value, repo_value, token=token_value, user=auth_user)
+                matrix_status = result.message
+                matrix_status_color = green if result.ok else (255, 80, 80)
+            elif action == "delete":
+                result = delete_repository(provider_value, base_url_value, owner_value, repo_value, token=token_value, user=auth_user)
+                matrix_status = result.message
+                matrix_status_color = green if result.ok else (255, 80, 80)
+            else:
+                raise ValueError(f"Unsupported service action: {action}")
+        except Exception as exc:
+            matrix_status = f"Service {action} failed: {exc}"
+            matrix_status_color = (255, 80, 80)
+
+    def _draw_services_input(
+        label: str,
+        label_right_x: int,
+        rect: pygame.Rect,
+        value: str,
+        field_id: int,
+        masked: bool = False,
+        placeholder: str = "",
+    ) -> pygame.Rect:
+        label_surface = small_font.render(label, True, white)
+        label_x_pos = label_right_x - label_surface.get_width()
+        label_y_pos = rect.y + 13
+        screen.blit(label_surface, (label_x_pos, label_y_pos))
+        border_color = green if services_active_field == field_id else gray
+        pygame.draw.rect(screen, (14, 14, 14), rect, border_radius=5)
+        pygame.draw.rect(screen, border_color, rect, 2, border_radius=5)
+        display_text = value[-services_visible_text_chars:] if value else ""
+        if masked and value:
+            display_text = "*" * min(len(value), services_visible_text_chars)
+        if display_text:
+            text_surface = small_font.render(display_text, True, white)
+        else:
+            text_surface = small_font.render(placeholder, True, gray)
+        screen.blit(text_surface, (rect.x + 10, rect.y + 13))
+        return pygame.Rect(label_x_pos, label_y_pos, label_surface.get_width(), label_surface.get_height())
 
     def _open_template_panel() -> None:
         nonlocal template_panel_open, settings_panel_open, matrix_status, matrix_status_color
@@ -648,7 +806,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     def _open_settings_panel() -> None:
         nonlocal settings_panel_open, year_text, file_text, url_text
         nonlocal force_push_enabled, debug_enabled, drag_lock_enabled, highlight_year_bounds_enabled, max_level_text
-        nonlocal user_text, email_text, token_text, token_visible, active_field
+        nonlocal user_text, owner_text, email_text, token_text, token_visible, active_field
         nonlocal template_panel_open, matrix_status, matrix_status_color
         save_marked_dates(marked, year, applied_file)
         matrix_status = "Opening settings..."
@@ -661,6 +819,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         git_profile_local = load_git_profile()
         url_text = git_profile_local.get("url", "") or applied_url
         user_text = git_profile_local.get("user", git_profile_local.get("username", "")) or user_text
+        owner_text = git_profile_local.get("owner", user_text) or owner_text
         email_text = git_profile_local.get("email", "") or email_text
         token_text = git_profile_local.get("token", "") or token_text
         token_visible = False
@@ -675,7 +834,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     def _cancel_settings_panel() -> None:
         nonlocal settings_panel_open, year_text, file_text, url_text
         nonlocal force_push_enabled, debug_enabled, drag_lock_enabled, highlight_year_bounds_enabled, max_level_text
-        nonlocal user_text, email_text, token_text, token_visible, active_field
+        nonlocal user_text, owner_text, email_text, token_text, token_visible, active_field
         nonlocal matrix_status, matrix_status_color
         year_text = str(applied_year)
         file_text = applied_file
@@ -687,6 +846,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         highlight_year_bounds_enabled = bool(git_profile_local.get("highlight_year_bounds", False))
         max_level_text = str(git_profile_local.get("max_level", 8))
         user_text = git_profile_local.get("user", git_profile_local.get("username", ""))
+        owner_text = git_profile_local.get("owner", user_text)
         email_text = git_profile_local.get("email", "")
         token_text = git_profile_local.get("token", "")
         token_visible = False
@@ -714,6 +874,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 user_text,
                 email_text,
                 token_text,
+                owner=owner_text,
                 year=applied_year,
                 path=applied_file,
                 url=url_text,
@@ -1016,6 +1177,30 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             drag_last_cell = None
                             continue
 
+                        if services_panel_open:
+                            if services_close_rect.collidepoint((x, y)):
+                                _close_services_panel()
+                            elif services_check_rect.collidepoint((x, y)):
+                                _run_service_action("check")
+                            elif services_create_rect.collidepoint((x, y)):
+                                _run_service_action("create")
+                            elif services_delete_rect.collidepoint((x, y)):
+                                _run_service_action("delete")
+                            elif services_provider_field_rect.collidepoint((x, y)):
+                                _activate_services_field(0)
+                            elif services_base_url_field_rect.collidepoint((x, y)):
+                                _activate_services_field(1)
+                            elif services_owner_field_rect.collidepoint((x, y)):
+                                _activate_services_field(2)
+                            elif services_repo_field_rect.collidepoint((x, y)):
+                                _activate_services_field(3)
+                            elif services_token_field_rect.collidepoint((x, y)):
+                                _activate_services_field(4)
+                            drag_left_active = False
+                            drag_right_active = False
+                            drag_last_cell = None
+                            continue
+
                         if new_button_rect.collidepoint((x, y)):
                             _action_new_matrix()
                             drag_left_active = False
@@ -1095,6 +1280,11 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             drag_left_active = False
                             drag_right_active = False
                             drag_last_cell = None
+                        elif services_button_rect.collidepoint((x, y)):
+                            _open_services_panel()
+                            drag_left_active = False
+                            drag_right_active = False
+                            drag_last_cell = None
                         elif grid_x <= x < grid_x + grid_width and grid_y <= y < grid_y + grid_height:
                             week = (x - grid_x) // cell_size
                             day = (y - grid_y) // cell_size
@@ -1105,7 +1295,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 drag_left_active = not drag_lock_enabled
                                 drag_last_cell = pos
                     elif event.button == 3:
-                        if settings_panel_open or template_panel_open:
+                        if settings_panel_open or template_panel_open or services_panel_open:
                             continue
                         if grid_x <= x < grid_x + grid_width and grid_y <= y < grid_y + grid_height:
                             week = (x - grid_x) // cell_size
@@ -1123,7 +1313,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                     if not drag_left_active and not drag_right_active:
                         drag_last_cell = None
                 elif event.type == pygame.MOUSEWHEEL:
-                    if settings_panel_open:
+                    if settings_panel_open or services_panel_open:
                         continue
                     if event.y != 0:
                         save_marked_dates(marked, year, applied_file)
@@ -1139,7 +1329,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         drag_right_active = False
                         drag_last_cell = None
                 elif event.type == pygame.MOUSEMOTION:
-                    if settings_panel_open or template_panel_open:
+                    if settings_panel_open or template_panel_open or services_panel_open:
                         continue
                     if not (drag_left_active or drag_right_active):
                         continue
@@ -1214,6 +1404,21 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             continue
                         continue
 
+                    if services_panel_open:
+                        if event.key == pygame.K_ESCAPE:
+                            _close_services_panel()
+                            continue
+                        if event.key == pygame.K_TAB:
+                            services_active_field = (services_active_field + 1) % 5 if services_active_field is not None else 0
+                            continue
+                        if event.key == pygame.K_RETURN:
+                            services_active_field = None
+                            continue
+                        if event.key == pygame.K_BACKSPACE and services_active_field is not None:
+                            _set_services_active_field(_get_services_active_field()[:-1])
+                            continue
+                        continue
+
                     template_slot = _template_slot_from_key(event.key)
                     if template_slot is not None:
                         if event.mod & pygame.KMOD_CTRL:
@@ -1252,6 +1457,11 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         drag_left_active = False
                         drag_right_active = False
                         drag_last_cell = None
+                    elif event.key == pygame.K_v:
+                        _open_services_panel()
+                        drag_left_active = False
+                        drag_right_active = False
+                        drag_last_cell = None
                     elif event.key == pygame.K_l:
                         drag_lock_enabled = not drag_lock_enabled
                         matrix_status = "Drag lock enabled" if drag_lock_enabled else "Drag lock disabled"
@@ -1266,6 +1476,9 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             _clear_field_selection()
                         else:
                             _set_active_field_value(_get_active_field_value() + event.text)
+                elif event.type == pygame.TEXTINPUT and services_panel_open and services_active_field is not None:
+                    if event.text and event.text.isprintable():
+                        _set_services_active_field(_get_services_active_field() + event.text)
         
         screen.fill(black)
         
@@ -1387,6 +1600,8 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
 
             if template_panel_open:
                 hover_guide_text = "1-5 load templates | Ctrl+1..5 save templates | Esc close"
+            elif services_panel_open:
+                hover_guide_text = "Check, create, or delete repos from the services panel | Esc close"
             elif not hover_guide_text:
                 if drag_lock_enabled:
                     hover_guide_text = "Click on the grid to draw | Scroll to change year"
@@ -1401,6 +1616,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 (deploy_button_rect, "Commit the current matrix to the local mock repository."),
                 (push_button_rect, "Push the current repository state to the remote origin."),
                 (archive_button_rect, "Archive the workspace repository into a saved archive."),
+                (services_button_rect, "Check, create, or delete repositories from the service API panel."),
                 (year_scroll_rect, "Scroll to change year."),
                 (settings_button_rect, "Open the settings panel to edit year, profile, and options [S]."),
                 (exit_button_rect, "Save the current matrix and exit the application [Esc]."),
@@ -1454,6 +1670,13 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             archive_text = small_font.render("ARCHIVE", True, archive_button_color)
             archive_text_rect = archive_text.get_rect(center=archive_button_rect.center)
             screen.blit(archive_text, archive_text_rect)
+
+            services_button_color = green if services_button_rect.collidepoint(pygame.mouse.get_pos()) else white
+            pygame.draw.rect(screen, (14, 14, 14), services_button_rect, border_radius=6)
+            pygame.draw.rect(screen, services_button_color, services_button_rect, 2, border_radius=6)
+            services_text = small_font.render("SERVICES", True, services_button_color)
+            services_text_rect = services_text.get_rect(center=services_button_rect.center)
+            screen.blit(services_text, services_text_rect)
 
             default_button_color = green if default_button_rect.collidepoint(pygame.mouse.get_pos()) else white
             pygame.draw.rect(screen, (14, 14, 14), default_button_rect, border_radius=6)
@@ -1518,6 +1741,67 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
 
                 panel_hint = small_font.render("1-5 load templates | Ctrl+1..5 save templates | Esc close", True, tip_green)
                 screen.blit(panel_hint, (template_panel_rect.x + 24, template_panel_rect.bottom - 26))
+
+            if services_panel_open:
+                services_shadow_rect = services_panel_rect.move(6, 6)
+                pygame.draw.rect(screen, (6, 6, 6), services_shadow_rect, border_radius=10)
+                pygame.draw.rect(screen, (12, 16, 14), services_panel_rect, border_radius=10)
+                pygame.draw.rect(screen, green, services_panel_rect, 2, border_radius=10)
+
+                services_title = font.render("Repository Services", True, green)
+                screen.blit(services_title, (services_panel_rect.x + 18, services_panel_rect.y + 12))
+                services_note = small_font.render("Check, create, or delete repos through a provider API hub.", True, tip_green)
+                screen.blit(services_note, (services_panel_rect.x + 18, services_panel_rect.y + 34))
+
+                close_color = green if services_close_rect.collidepoint(pygame.mouse.get_pos()) else white
+                pygame.draw.rect(screen, (14, 14, 14), services_close_rect, border_radius=6)
+                pygame.draw.rect(screen, close_color, services_close_rect, 2, border_radius=6)
+                close_text = small_font.render("CLOSE", True, close_color)
+                close_text_rect = close_text.get_rect(center=services_close_rect.center)
+                screen.blit(close_text, close_text_rect)
+
+                services_help_items: list[tuple[pygame.Rect, str]] = []
+                provider_label_rect = _draw_services_input("Provider", services_label_right_x, services_provider_field_rect, services_provider_text, 0, placeholder="github")
+                services_help_items.append((services_provider_field_rect, "Provider key: github, gitlab, bitbucket, or a custom provider name."))
+                base_url_label_rect = _draw_services_input("API Base", services_label_right_x, services_base_url_field_rect, services_base_url_text, 1, placeholder="https://api.github.com")
+                services_help_items.append((services_base_url_field_rect, "Base API URL. Leave blank to use the built-in provider default."))
+                owner_label_rect = _draw_services_input("Owner", services_label_right_x, services_owner_field_rect, services_owner_text, 2, placeholder="owner / workspace / namespace")
+                services_help_items.append((services_owner_field_rect, "GitHub org/user, GitLab namespace, or Bitbucket workspace."))
+                repo_label_rect = _draw_services_input("Repo", services_label_right_x, services_repo_field_rect, services_repo_text, 3, placeholder="repository-name")
+                services_help_items.append((services_repo_field_rect, "Repository name or slug."))
+                token_label_rect = _draw_services_input("Token", services_label_right_x, services_token_field_rect, services_token_text, 4, masked=True, placeholder="personal access token")
+                services_help_items.append((services_token_field_rect, "Access token or app password for the selected provider."))
+
+                services_help_box_rect = pygame.Rect(services_panel_rect.x + 18, services_panel_rect.bottom - 98, services_panel_rect.width - 36, 24)
+                hovered_services_help = ""
+                mouse_pos = pygame.mouse.get_pos()
+                for label_rect, help_text in services_help_items:
+                    if label_rect.collidepoint(mouse_pos):
+                        hovered_services_help = help_text
+                        break
+                if hovered_services_help:
+                    services_help_surface = small_font.render(hovered_services_help, True, tip_green)
+                    services_help_rect = services_help_surface.get_rect(midleft=(services_help_box_rect.x + 8, services_help_box_rect.centery))
+                    screen.blit(services_help_surface, services_help_rect)
+
+                check_color = green if services_check_rect.collidepoint(pygame.mouse.get_pos()) else white
+                create_color = green if services_create_rect.collidepoint(pygame.mouse.get_pos()) else white
+                delete_color = green if services_delete_rect.collidepoint(pygame.mouse.get_pos()) else white
+                pygame.draw.rect(screen, (14, 14, 14), services_check_rect, border_radius=6)
+                pygame.draw.rect(screen, check_color, services_check_rect, 2, border_radius=6)
+                pygame.draw.rect(screen, (14, 14, 14), services_create_rect, border_radius=6)
+                pygame.draw.rect(screen, create_color, services_create_rect, 2, border_radius=6)
+                pygame.draw.rect(screen, (14, 14, 14), services_delete_rect, border_radius=6)
+                pygame.draw.rect(screen, delete_color, services_delete_rect, 2, border_radius=6)
+                check_text = small_font.render("CHECK", True, check_color)
+                create_text = small_font.render("CREATE", True, create_color)
+                delete_text = small_font.render("DELETE", True, delete_color)
+                screen.blit(check_text, check_text.get_rect(center=services_check_rect.center))
+                screen.blit(create_text, create_text.get_rect(center=services_create_rect.center))
+                screen.blit(delete_text, delete_text.get_rect(center=services_delete_rect.center))
+
+                services_panel_hint = small_font.render("Edit src/module/repo_services.py to add another provider.", True, tip_green)
+                screen.blit(services_panel_hint, (services_panel_rect.x + 18, services_panel_rect.bottom - 26))
 
             if settings_panel_open:
                 _draw_settings_form("Settings", "CLOSE", settings_panel_y + settings_panel_height - 12)

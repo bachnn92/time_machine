@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 import subprocess
 from datetime import datetime
 
@@ -46,6 +47,7 @@ def _default_git_profile() -> dict:
     git_defaults = _load_git_config_defaults()
     return {
         "user": git_defaults["user"],
+        "owner": "",
         "email": git_defaults["email"],
         "token": "",
         "year": 2026,
@@ -85,7 +87,10 @@ def load_commit_schedule(filename: str = "data.json") -> list[tuple[datetime, in
                 date_str = item.get("date")
                 if not isinstance(date_str, str):
                     continue
-                level = _clamp_level(int(item.get("level", 4)), max_level=8)
+                try:
+                    level = _clamp_level(int(item.get("level", 4)), max_level=8)
+                except (TypeError, ValueError):
+                    level = 4
                 if level <= 0:
                     continue
                 schedule.append((datetime.fromisoformat(date_str), level))
@@ -106,9 +111,63 @@ def load_marked_dates(filename: str = "data.json") -> dict[tuple[int, int], int]
     if not os.path.exists(filepath):
         return {}
     try:
+        with open(filepath, 'r') as f:
+            data = json.load(f)
+
         marked: dict[tuple[int, int], int] = {}
 
-        for dt, level in load_commit_schedule(filename):
+        if not isinstance(data, list):
+            return {}
+
+        for item in data:
+            if isinstance(item, str):
+                dt = datetime.fromisoformat(item)
+                week, day = year_grid_position(dt.year, dt.month, dt.day)
+                marked[(week, day)] = 4
+                continue
+
+            if not isinstance(item, dict):
+                continue
+
+            try:
+                level = _clamp_level(int(item.get("level", 4)), max_level=8)
+            except (TypeError, ValueError):
+                level = 4
+            if level <= 0:
+                continue
+
+            coordinate_data = item.get("coordinate", item.get("cordinate"))
+            if isinstance(coordinate_data, dict):
+                week = coordinate_data.get("week")
+                day = coordinate_data.get("day")
+                if isinstance(week, int) and isinstance(day, int):
+                    marked[(week, day)] = level
+                    continue
+            elif isinstance(coordinate_data, list) and len(coordinate_data) == 2:
+                first, second = coordinate_data
+                if isinstance(first, int) and isinstance(second, int):
+                    if 0 <= first <= 7 and second >= 0:
+                        day, week = first, second
+                    else:
+                        week, day = first, second
+                    marked[(week, day)] = level
+                    continue
+            elif isinstance(coordinate_data, str):
+                match = re.match(r"\s*\[?\s*(\d+)\s*,\s*(\d+)\s*\]?\s*$", coordinate_data)
+                if match:
+                    first = int(match.group(1))
+                    second = int(match.group(2))
+                    if 0 <= first <= 7 and second >= 0:
+                        day, week = first, second
+                    else:
+                        week, day = first, second
+                    marked[(week, day)] = level
+                    continue
+
+            date_str = item.get("date")
+            if not isinstance(date_str, str):
+                continue
+            dt = datetime.fromisoformat(date_str)
             week, day = year_grid_position(dt.year, dt.month, dt.day)
             marked[(week, day)] = level
 
@@ -125,7 +184,7 @@ def save_marked_dates(marked: dict[tuple[int, int], int], year: int, filename: s
         year: Year for date conversion
         filename: Simple filename (stored in schema/) or full path (used as-is)
     """
-    dates = []
+    entries: list[tuple[datetime, dict[str, object]]] = []
     for (week, day), level in marked.items():
         level = _clamp_level(level, max_level=8)
         if level <= 0:
@@ -133,7 +192,18 @@ def save_marked_dates(marked: dict[tuple[int, int], int], year: int, filename: s
         dt = date_from_year_grid_position(year, week, day)
         if dt is None:
             continue
-        dates.append({"date": dt.isoformat(), "level": level})
+        entries.append(
+            (
+                datetime(dt.year, dt.month, dt.day),
+                {
+                    "cordinate": f"[{day}, {week}]",
+                    "date": dt.isoformat(),
+                    "level": level,
+                },
+            )
+        )
+    entries.sort(key=lambda item: item[0])
+    dates = [entry for _, entry in entries]
     
     filepath = _get_filepath(filename)
     # Create parent directories if they don't exist
@@ -141,8 +211,12 @@ def save_marked_dates(marked: dict[tuple[int, int], int], year: int, filename: s
     if dirpath:
         os.makedirs(dirpath, exist_ok=True)
     
-    with open(filepath, 'w') as f:
-        json.dump(dates, f)
+    with open(filepath, 'w', encoding='utf-8') as f:
+        f.write("[\n")
+        for index, entry in enumerate(dates):
+            suffix = "," if index < len(dates) - 1 else ""
+            f.write(f"  {json.dumps(entry, ensure_ascii=False)}{suffix}\n")
+        f.write("]\n")
 
 
 def load_git_profile(filename: str = "settings.json") -> dict:
@@ -188,9 +262,11 @@ def load_git_profile(filename: str = "settings.json") -> dict:
         if not isinstance(url_value, str):
             url_value = defaults["url"]
         user_value = profile_data.get("user", profile_data.get("username", ""))
+        owner_value = profile_data.get("owner", "")
         email_value = profile_data.get("email", "")
         return {
             "user": user_value.strip() if isinstance(user_value, str) and user_value.strip() else defaults["user"],
+            "owner": owner_value.strip() if isinstance(owner_value, str) else defaults["owner"],
             "email": email_value.strip() if isinstance(email_value, str) and email_value.strip() else defaults["email"],
             "token": profile_data.get("token", ""),
             "year": year_value,
@@ -211,6 +287,7 @@ def save_git_profile(
     user: str,
     email: str,
     token: str = "",
+    owner: str = "",
     year: int = 2026,
     path: str = "data.json",
     url: str = "",
@@ -235,6 +312,7 @@ def save_git_profile(
     profile = {
         "profile": {
             "user": user.strip(),
+            "owner": owner.strip(),
             "email": email.strip(),
             "token": token.strip(),
             "url": url.strip() if isinstance(url, str) and url.strip() else "",
