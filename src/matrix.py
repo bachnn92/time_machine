@@ -583,6 +583,11 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         matrix_status = "Template panel opened"
         matrix_status_color = green
 
+    def _set_drag_lock_state(enabled: bool) -> None:
+        nonlocal drag_lock_enabled, applied_drag_lock
+        drag_lock_enabled = enabled
+        applied_drag_lock = enabled
+
     def _reset_settings_to_defaults() -> None:
         nonlocal year_text, user_text, email_text, url_text, token_text
         nonlocal force_push_enabled, debug_enabled, drag_lock_enabled, highlight_year_bounds_enabled, max_level_text
@@ -598,7 +603,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         year_text = str(default_year)
         force_push_enabled = True
         debug_enabled = True
-        drag_lock_enabled = True
+        _set_drag_lock_state(True)
         highlight_year_bounds_enabled = True
         max_level_text = "8"
 
@@ -766,8 +771,8 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         debug_label_rect = _draw_settings_toggle("Debug Mode", config_right_label_right_x, debug_rect, debug_enabled, label_on_right=True)
         label_help_items.append((debug_rect, debug_help))
 
-        drag_lock_help = "Lock drawing to click-only cells (disable click-drag editing)."
-        drag_lock_label_rect = _draw_settings_toggle("Drag Lock", config_right_label_right_x, drag_lock_rect, drag_lock_enabled, label_on_right=True)
+        drag_lock_help = "Enable drag drawing on the matrix (disable click-only editing)."
+        drag_lock_label_rect = _draw_settings_toggle("Enable Drag", config_right_label_right_x, drag_lock_rect, drag_lock_enabled, label_on_right=True)
         label_help_items.append((drag_lock_rect, drag_lock_help))
 
         year_ends_help = "Highlight Jan 1 and Dec 31 cells on the grid."
@@ -823,11 +828,11 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         email_text = git_profile_local.get("email", "") or email_text
         token_text = git_profile_local.get("token", "") or token_text
         token_visible = False
-        force_push_enabled = bool(git_profile_local.get("force_push", False))
-        debug_enabled = bool(git_profile_local.get("debug", False))
-        drag_lock_enabled = bool(git_profile_local.get("drag_lock", False))
-        highlight_year_bounds_enabled = bool(git_profile_local.get("highlight_year_bounds", False))
-        max_level_text = str(git_profile_local.get("max_level", 8))
+        force_push_enabled = applied_force_push
+        debug_enabled = applied_debug
+        drag_lock_enabled = applied_drag_lock
+        highlight_year_bounds_enabled = applied_highlight_year_bounds
+        max_level_text = str(applied_max_level)
         active_field = None
         _clear_field_selection()
 
@@ -840,11 +845,11 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
         file_text = applied_file
         git_profile_local = load_git_profile()
         url_text = git_profile_local.get("url", "")
-        force_push_enabled = bool(git_profile_local.get("force_push", False))
-        debug_enabled = bool(git_profile_local.get("debug", False))
-        drag_lock_enabled = bool(git_profile_local.get("drag_lock", False))
-        highlight_year_bounds_enabled = bool(git_profile_local.get("highlight_year_bounds", False))
-        max_level_text = str(git_profile_local.get("max_level", 8))
+        force_push_enabled = applied_force_push
+        debug_enabled = applied_debug
+        drag_lock_enabled = applied_drag_lock
+        highlight_year_bounds_enabled = applied_highlight_year_bounds
+        max_level_text = str(applied_max_level)
         user_text = git_profile_local.get("user", git_profile_local.get("username", ""))
         owner_text = git_profile_local.get("owner", user_text)
         email_text = git_profile_local.get("email", "")
@@ -923,7 +928,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             active_field = None
                             _clear_field_selection()
                         elif drag_lock_rect.collidepoint(pos):
-                            drag_lock_enabled = not drag_lock_enabled
+                            _set_drag_lock_state(not drag_lock_enabled)
                             active_field = None
                             _clear_field_selection()
                         elif highlight_year_bounds_rect.collidepoint(pos):
@@ -1292,7 +1297,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                                 pos = (week, day)
                                 new_level = min(marked.get(pos, 0) + 1, applied_max_level)
                                 marked[pos] = new_level
-                                drag_left_active = not drag_lock_enabled
+                                drag_left_active = drag_lock_enabled
                                 drag_last_cell = pos
                     elif event.button == 3:
                         if settings_panel_open or template_panel_open or services_panel_open:
@@ -1303,7 +1308,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             if 0 <= week < matrix_columns and 0 <= day < 7 and date_from_year_grid_position(year, week, day) is not None:
                                 pos = (week, day)
                                 marked.pop(pos, None)
-                                drag_right_active = not drag_lock_enabled
+                                drag_right_active = drag_lock_enabled
                                 drag_last_cell = pos
                 elif event.type == pygame.MOUSEBUTTONUP:
                     if event.button == 1:
@@ -1381,6 +1386,13 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             _cancel_settings_panel()
                             matrix_status = "Settings canceled"
                             matrix_status_color = dark_gray
+                        elif active_field is None and event.key == pygame.K_l:
+                            _set_drag_lock_state(not drag_lock_enabled)
+                            matrix_status = "Drag enabled" if drag_lock_enabled else "Drag disabled"
+                            matrix_status_color = green
+                            drag_left_active = False
+                            drag_right_active = False
+                            drag_last_cell = None
                         elif event.key == pygame.K_BACKSPACE and active_field is not None:
                             if _is_active_field_selected():
                                 _set_active_field_value("")
@@ -1463,8 +1475,8 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         drag_right_active = False
                         drag_last_cell = None
                     elif event.key == pygame.K_l:
-                        drag_lock_enabled = not drag_lock_enabled
-                        matrix_status = "Drag lock enabled" if drag_lock_enabled else "Drag lock disabled"
+                        _set_drag_lock_state(not drag_lock_enabled)
+                        matrix_status = "Drag enabled" if drag_lock_enabled else "Drag disabled"
                         matrix_status_color = green
                         drag_left_active = False
                         drag_right_active = False
@@ -1552,9 +1564,9 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                         hover_commits = str(marked.get((hover_week, hover_day), 0))
                         hover_axis_text = f"[{hover_day + 1}, {hover_week + 1}]"
                         if drag_lock_enabled:
-                            hover_guide_text = "Left click to draw | Right click to erase | Enable to drag [L]."
-                        else:
                             hover_guide_text = "Left click(drag) to draw | Right click(drag) to erase | Disable to drag [L]."
+                        else:
+                            hover_guide_text = "Left click to draw | Right click to erase | Enable to drag [L]."
             
             # Draw labels
             day_labels = [(0, "Sun"), (3, "Wed"), (6, "Sat")]
@@ -1604,9 +1616,9 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 hover_guide_text = "Check, create, or delete repos from the services panel | Esc close"
             elif not hover_guide_text:
                 if drag_lock_enabled:
-                    hover_guide_text = "Click on the grid to draw | Scroll to change year"
-                else:
                     hover_guide_text = "Click(drag) on the grid to draw | Scroll to change year"
+                else:
+                    hover_guide_text = "Click on the grid to draw | Scroll to change year"
 
             main_button_help_items: list[tuple[pygame.Rect, str]] = [
                 (new_button_rect, "Start a new matrix [N]."),
