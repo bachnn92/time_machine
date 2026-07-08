@@ -101,6 +101,12 @@ def load_commit_schedule(filename: str = "data.json") -> list[tuple[datetime, in
         return []
 
 
+def summarize_commit_schedule(filename: str = "data.json") -> tuple[int, int]:
+    """Return (entry_count, total_commit_count) based on the saved JSON schedule."""
+    schedule = load_commit_schedule(filename)
+    return len(schedule), sum(level for _, level in schedule)
+
+
 def _normalize_coordinate_pair(first: int, second: int, fallback_date: datetime | None = None) -> tuple[int, int] | None:
     """Normalize coordinate pairs to the matrix grid format (week, day)."""
     if not isinstance(first, int) or not isinstance(second, int):
@@ -207,6 +213,31 @@ def load_marked_dates(filename: str = "data.json") -> dict[tuple[int, int], int]
         return marked
     except:
         return {}
+
+
+def set_marked_cell_level(marked: dict[tuple[int, int], int], pos: tuple[int, int], level: int, year: int, filename: str = "data.json") -> None:
+    """Update a single cell's level and persist the change immediately."""
+    normalized_level = _clamp_level(level, max_level=8)
+    if normalized_level <= 0:
+        marked.pop(pos, None)
+    else:
+        marked[pos] = normalized_level
+    save_marked_dates(marked, year, filename)
+
+
+def clear_marked_cell(marked: dict[tuple[int, int], int], pos: tuple[int, int], year: int, filename: str = "data.json") -> None:
+    """Clear a single cell and persist the change immediately."""
+    marked.pop(pos, None)
+    save_marked_dates(marked, year, filename)
+
+
+def load_marked_dates_into(marked: dict[tuple[int, int], int], source_filename: str, year: int, target_filename: str = "data.json") -> dict[tuple[int, int], int]:
+    """Load data from another file into the provided mapping and persist it to the target file."""
+    loaded = load_marked_dates(source_filename)
+    marked.clear()
+    marked.update(loaded)
+    save_marked_dates(marked, year, target_filename)
+    return marked
 
 
 def save_marked_dates(marked: dict[tuple[int, int], int], year: int, filename: str = "data.json") -> None:

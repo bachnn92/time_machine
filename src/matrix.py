@@ -4,8 +4,9 @@
 from datetime import date
 
 from .module.data_persistence import (
-    load_marked_dates, save_marked_dates,
-    load_git_config_profile, load_git_profile, save_git_profile
+    clear_marked_cell, load_marked_dates, load_marked_dates_into, save_marked_dates,
+    load_git_config_profile, load_git_profile, save_git_profile,
+    set_marked_cell_level, summarize_commit_schedule,
 )
 from .module.daytime import date_from_year_grid_position, year_grid_position
 from .module.deploy import archive_workspace_repo, deploy_mock_repo, push_workspace_repo
@@ -412,8 +413,8 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     def _load_template_slot(slot: int) -> None:
         nonlocal marked, matrix_status, matrix_status_color
         template_filename = f"template-{slot}.json"
-        marked = load_marked_dates(template_filename)
-        matrix_status = f"Loaded {template_filename}"
+        load_marked_dates_into(marked, template_filename, year, applied_file)
+        matrix_status = f"Loaded {template_filename} into {applied_file}"
         matrix_status_color = green
 
     def _save_template_slot(slot: int) -> None:
@@ -443,8 +444,8 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
 
     def _action_load_default_matrix() -> None:
         nonlocal marked, matrix_status, matrix_status_color
-        marked = load_marked_dates("default-data.json")
-        matrix_status = "Loaded default-data.json"
+        load_marked_dates_into(marked, "default-data.json", year, applied_file)
+        matrix_status = f"Loaded default-data.json into {applied_file}"
         matrix_status_color = green
 
     def _set_services_active_field(value: str) -> None:
@@ -1296,7 +1297,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             if 0 <= week < matrix_columns and 0 <= day < 7 and date_from_year_grid_position(year, week, day) is not None:
                                 pos = (week, day)
                                 new_level = min(marked.get(pos, 0) + 1, applied_max_level)
-                                marked[pos] = new_level
+                                set_marked_cell_level(marked, pos, new_level, year, applied_file)
                                 drag_left_active = drag_lock_enabled
                                 drag_last_cell = pos
                     elif event.button == 3:
@@ -1307,7 +1308,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             day = (y - grid_y) // cell_size
                             if 0 <= week < matrix_columns and 0 <= day < 7 and date_from_year_grid_position(year, week, day) is not None:
                                 pos = (week, day)
-                                marked.pop(pos, None)
+                                clear_marked_cell(marked, pos, year, applied_file)
                                 drag_right_active = drag_lock_enabled
                                 drag_last_cell = pos
                 elif event.type == pygame.MOUSEBUTTONUP:
@@ -1346,9 +1347,9 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             pos = (week, day)
                             if pos != drag_last_cell:
                                 if drag_left_active:
-                                    marked[pos] = min(marked.get(pos, 0) + 1, applied_max_level)
+                                    set_marked_cell_level(marked, pos, min(marked.get(pos, 0) + 1, applied_max_level), year, applied_file)
                                 elif drag_right_active:
-                                    marked.pop(pos, None)
+                                    clear_marked_cell(marked, pos, year, applied_file)
                                 drag_last_cell = pos
                 elif event.type == pygame.KEYDOWN:
                     if settings_panel_open:
@@ -1668,6 +1669,18 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             deploy_text = small_font.render("COMMIT", True, deploy_button_color)
             deploy_text_rect = deploy_text.get_rect(center=deploy_button_rect.center)
             screen.blit(deploy_text, deploy_text_rect)
+
+            commit_summary_text = ""
+            try:
+                entry_count, total_commits = summarize_commit_schedule(applied_file)
+                commit_summary_text = f"{entry_count} entries • {total_commits} commits"
+            except Exception:
+                commit_summary_text = "0 entries • 0 commits"
+            commit_summary_surface = small_font.render(commit_summary_text, True, tip_green)
+            commit_summary_rect = commit_summary_surface.get_rect(
+                midright=(grid_x + grid_width - 8, grid_y + grid_height + 18)
+            )
+            screen.blit(commit_summary_surface, commit_summary_rect)
 
             push_button_color = green if push_button_rect.collidepoint(pygame.mouse.get_pos()) else white
             pygame.draw.rect(screen, (14, 14, 14), push_button_rect, border_radius=6)
