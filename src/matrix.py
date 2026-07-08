@@ -42,7 +42,14 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     # Screen setup
     screen_width, screen_height = 920, 580
     screen = pygame.display.set_mode((screen_width, screen_height))
-    pygame.display.set_caption("Time Machine")
+    icon_surface = pygame.Surface((32, 32), pygame.SRCALPHA)
+    pygame.draw.circle(icon_surface, (38, 228, 118), (16, 16), 14)
+    pygame.draw.circle(icon_surface, (0, 0, 0), (16, 16), 14, 2)
+    pygame.draw.line(icon_surface, (0, 0, 0), (16, 16), (16, 8), 2)
+    pygame.draw.line(icon_surface, (0, 0, 0), (16, 16), (22, 18), 2)
+    pygame.draw.circle(icon_surface, (0, 0, 0), (16, 16), 2)
+    pygame.display.set_icon(icon_surface)
+    pygame.display.set_caption("Commit Graph Time Machine")
     try:
         import pygame.scrap
         pygame.scrap.init()
