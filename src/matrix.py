@@ -1550,7 +1550,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                     if hover_date is not None:
                         hover_date_text = hover_date.strftime("%A, %d %b")
                         hover_commits = str(marked.get((hover_week, hover_day), 0))
-                        hover_axis_text = f"[{hover_day + 1}:{hover_week + 1}]"
+                        hover_axis_text = f"[{hover_day + 1}, {hover_week + 1}]"
                         if drag_lock_enabled:
                             hover_guide_text = "Left click to draw | Right click to erase | Enable to drag [L]."
                         else:

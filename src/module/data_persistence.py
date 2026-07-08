@@ -14,8 +14,8 @@ def _clamp_level(level: int, max_level: int = 8) -> int:
 
 
 def _get_filepath(filename: str) -> str:
-    """Resolve filepath: if filename contains '/', use as-is; otherwise prefix with 'schema/'."""
-    if "/" in filename:
+    """Resolve filepath: absolute paths stay as-is; otherwise prefix with 'schema/'."""
+    if os.path.isabs(filename) or "/" in filename or "\\" in filename:
         return filename
     return f"schema/{filename}"
 
@@ -101,6 +101,36 @@ def load_commit_schedule(filename: str = "data.json") -> list[tuple[datetime, in
         return []
 
 
+def _normalize_coordinate_pair(first: int, second: int, fallback_date: datetime | None = None) -> tuple[int, int] | None:
+    """Normalize coordinate pairs to the matrix grid format (week, day)."""
+    if not isinstance(first, int) or not isinstance(second, int):
+        return None
+
+    if fallback_date is not None:
+        expected_week, expected_day = year_grid_position(
+            fallback_date.year,
+            fallback_date.month,
+            fallback_date.day,
+        )
+        if (first, second) == (expected_week, expected_day):
+            return expected_week, expected_day
+        if (first, second) == (expected_day, expected_week):
+            return expected_week, expected_day
+        if (first, second) == (expected_day + 1, expected_week + 1):
+            return expected_week, expected_day
+
+    if 0 <= first <= 52 and 0 <= second <= 6:
+        return first, second
+    if 0 <= first <= 6 and 0 <= second <= 52:
+        return second, first
+    if 1 <= first <= 7 and 1 <= second <= 53:
+        return second - 1, first - 1
+
+    if fallback_date is not None:
+        return year_grid_position(fallback_date.year, fallback_date.month, fallback_date.day)
+    return None
+
+
 def load_marked_dates(filename: str = "data.json") -> dict[tuple[int, int], int]:
     """Loads marked dates and levels from JSON file.
     
@@ -137,6 +167,14 @@ def load_marked_dates(filename: str = "data.json") -> dict[tuple[int, int], int]
                 continue
 
             coordinate_data = item.get("coordinate", item.get("cordinate"))
+            date_str = item.get("date")
+            fallback_date = None
+            if isinstance(date_str, str):
+                try:
+                    fallback_date = datetime.fromisoformat(date_str)
+                except ValueError:
+                    fallback_date = None
+
             if isinstance(coordinate_data, dict):
                 week = coordinate_data.get("week")
                 day = coordinate_data.get("day")
@@ -144,32 +182,27 @@ def load_marked_dates(filename: str = "data.json") -> dict[tuple[int, int], int]
                     marked[(week, day)] = level
                     continue
             elif isinstance(coordinate_data, list) and len(coordinate_data) == 2:
-                first, second = coordinate_data
-                if isinstance(first, int) and isinstance(second, int):
-                    if 0 <= first <= 7 and second >= 0:
-                        day, week = first, second
-                    else:
-                        week, day = first, second
+                normalized = _normalize_coordinate_pair(coordinate_data[0], coordinate_data[1], fallback_date)
+                if normalized is not None:
+                    week, day = normalized
                     marked[(week, day)] = level
                     continue
             elif isinstance(coordinate_data, str):
                 match = re.match(r"\s*\[?\s*(\d+)\s*,\s*(\d+)\s*\]?\s*$", coordinate_data)
                 if match:
-                    first = int(match.group(1))
-                    second = int(match.group(2))
-                    if 0 <= first <= 7 and second >= 0:
-                        day, week = first, second
-                    else:
-                        week, day = first, second
-                    marked[(week, day)] = level
-                    continue
+                    normalized = _normalize_coordinate_pair(
+                        int(match.group(1)),
+                        int(match.group(2)),
+                        fallback_date,
+                    )
+                    if normalized is not None:
+                        week, day = normalized
+                        marked[(week, day)] = level
+                        continue
 
-            date_str = item.get("date")
-            if not isinstance(date_str, str):
-                continue
-            dt = datetime.fromisoformat(date_str)
-            week, day = year_grid_position(dt.year, dt.month, dt.day)
-            marked[(week, day)] = level
+            if fallback_date is not None:
+                week, day = year_grid_position(fallback_date.year, fallback_date.month, fallback_date.day)
+                marked[(week, day)] = level
 
         return marked
     except:
@@ -196,7 +229,7 @@ def save_marked_dates(marked: dict[tuple[int, int], int], year: int, filename: s
             (
                 datetime(dt.year, dt.month, dt.day),
                 {
-                    "cordinate": f"[{day}, {week}]",
+                    "cordinate": f"[{day + 1}, {week + 1}]",
                     "date": dt.isoformat(),
                     "level": level,
                 },
