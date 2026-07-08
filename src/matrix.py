@@ -195,9 +195,12 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     settings_panel_open = False
     template_panel_open = False
     services_panel_open = False
+    about_panel_open = False
     template_panel_rect = pygame.Rect(screen_width // 2 - 260, screen_height // 2 - 215, 520, 430)
     template_close_rect = pygame.Rect(template_panel_rect.right - 110, template_panel_rect.y + 16, 86, 30)
     services_panel_rect = pygame.Rect(screen_width // 2 - 260, screen_height // 2 - 170, 520, 340)
+    about_panel_rect = pygame.Rect(screen_width // 2 - 220, screen_height // 2 - 150, 440, 280)
+    about_close_rect = pygame.Rect(about_panel_rect.right - 102, about_panel_rect.y + 16, 86, 30)
     services_close_rect = pygame.Rect(services_panel_rect.right - 110, services_panel_rect.y + 16, 86, 30)
     services_check_rect = pygame.Rect(services_panel_rect.x + 24, services_panel_rect.bottom - 62, 86, 30)
     services_create_rect = pygame.Rect(services_check_rect.right + 12, services_panel_rect.bottom - 62, 86, 30)
@@ -211,6 +214,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
     services_repo_field_rect = pygame.Rect(services_field_x, services_panel_rect.y + 158, services_field_width, 30)
     services_token_field_rect = pygame.Rect(services_field_x, services_panel_rect.y + 192, services_field_width, 30)
     services_visible_text_chars = max(30, (services_field_width - 30) // 8)
+    copyright_box_rect = pygame.Rect(screen_width - 220, screen_height - 28, 210, 22)
     template_slot_count = 9
     template_row_height = 40
     template_label_x = template_panel_rect.x + 24
@@ -1216,6 +1220,25 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             drag_last_cell = None
                             continue
 
+                        if about_panel_open:
+                            if about_close_rect.collidepoint((x, y)):
+                                about_panel_open = False
+                                matrix_status = "About closed"
+                                matrix_status_color = dark_gray
+                            drag_left_active = False
+                            drag_right_active = False
+                            drag_last_cell = None
+                            continue
+
+                        if copyright_box_rect.collidepoint((x, y)):
+                            about_panel_open = True
+                            matrix_status = "About opened"
+                            matrix_status_color = green
+                            drag_left_active = False
+                            drag_right_active = False
+                            drag_last_cell = None
+                            continue
+
                         if new_button_rect.collidepoint((x, y)):
                             _action_new_matrix()
                             drag_left_active = False
@@ -1410,6 +1433,13 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                             else:
                                 _set_active_field_value(_get_active_field_value()[:-1])
                         continue
+
+                    if about_panel_open:
+                        if event.key == pygame.K_ESCAPE:
+                            about_panel_open = False
+                            matrix_status = "About closed"
+                            matrix_status_color = dark_gray
+                            continue
 
                     if template_panel_open:
                         if event.key == pygame.K_ESCAPE:
@@ -1746,6 +1776,12 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
             exit_text_rect = exit_text.get_rect(center=exit_button_rect.center)
             screen.blit(exit_text, exit_text_rect)
 
+            copyright_hovered = copyright_box_rect.collidepoint(pygame.mouse.get_pos())
+            copyright_color = green if copyright_hovered else gray
+            copyright_surface = small_font.render("© 2026 Cresential, Inc.", True, copyright_color)
+            copyright_rect = copyright_surface.get_rect(bottomright=(screen_width - 10, screen_height - 8))
+            screen.blit(copyright_surface, copyright_rect)
+
             if template_panel_open:
                 template_shadow_rect = template_panel_rect.move(6, 6)
                 pygame.draw.rect(screen, (6, 6, 6), template_shadow_rect, border_radius=10)
@@ -1778,6 +1814,65 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                     save_text = small_font.render("SAVE", True, save_color)
                     save_text_rect = save_text.get_rect(center=template_save_rects[i].center)
                     screen.blit(save_text, save_text_rect)
+
+            if about_panel_open:
+                about_shadow_rect = about_panel_rect.move(6, 6)
+                pygame.draw.rect(screen, (6, 6, 6), about_shadow_rect, border_radius=10)
+                pygame.draw.rect(screen, (12, 16, 14), about_panel_rect, border_radius=10)
+                pygame.draw.rect(screen, green, about_panel_rect, 2, border_radius=10)
+
+                about_title = font.render("About Time Machine", True, green)
+                screen.blit(about_title, (about_panel_rect.x + 20, about_panel_rect.y + 16))
+
+                close_color = green if about_close_rect.collidepoint(pygame.mouse.get_pos()) else white
+                pygame.draw.rect(screen, (14, 14, 14), about_close_rect, border_radius=6)
+                pygame.draw.rect(screen, close_color, about_close_rect, 2, border_radius=6)
+                close_text = small_font.render("CLOSE", True, close_color)
+                close_text_rect = close_text.get_rect(center=about_close_rect.center)
+                screen.blit(close_text, close_text_rect)
+
+                about_lines = [
+                    "Time Machine is a compact matrix editor for planning and visualizing commit activity.",
+                    "It helps you sketch contribution patterns, save reusable templates, and manage local repository workflows.",
+                    "",
+                    "Author: Bach Nguyen Ngoc",
+                    "Organization: Cresential, Inc.",
+                    "License: Proprietary",
+                ]
+                max_text_width = about_panel_rect.width - 48
+                text_y = about_panel_rect.y + 58
+                for line in about_lines:
+                    if not line:
+                        text_y += 10
+                        continue
+                    line_color = green if line.startswith("Author") or line.startswith("Organization") or line.startswith("License") else white
+                    wrapped_lines = []
+                    current = line
+                    while current and small_font.size(current)[0] > max_text_width:
+                        words = current.split()
+                        if len(words) == 1:
+                            wrapped_lines.append(current)
+                            break
+                        fit = []
+                        current_width = 0
+                        for word in words:
+                            test = f"{' '.join(fit + [word])}" if fit else word
+                            if small_font.size(test)[0] <= max_text_width:
+                                fit.append(word)
+                            else:
+                                break
+                        if not fit:
+                            fit = [words[0]]
+                        wrapped_lines.append(" ".join(fit))
+                        current = current[len(" ".join(fit)) :].lstrip()
+                    if current:
+                        wrapped_lines.append(current)
+                    if not wrapped_lines:
+                        wrapped_lines = [line]
+                    for wrapped_line in wrapped_lines:
+                        line_surface = small_font.render(wrapped_line, True, line_color)
+                        screen.blit(line_surface, (about_panel_rect.x + 24, text_y))
+                        text_y += 18
 
             if services_panel_open:
                 services_shadow_rect = services_panel_rect.move(6, 6)
