@@ -1829,7 +1829,10 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                 pygame.draw.rect(screen, green, about_panel_rect, 2, border_radius=10)
 
                 about_title = font.render("About Time Machine", True, green)
+                about_version = small_font.render("Version 1.0.0", True, gray)
+
                 screen.blit(about_title, (about_panel_rect.x + 20, about_panel_rect.y + 16))
+                screen.blit(about_version, (about_panel_rect.x + 20, about_panel_rect.y + 42))
 
                 close_color = green if about_close_rect.collidepoint(pygame.mouse.get_pos()) else white
                 pygame.draw.rect(screen, (14, 14, 14), about_close_rect, border_radius=6)
@@ -1847,7 +1850,7 @@ def run_app(year: int = 2025, filename: str = "data.json") -> None:
                     "License: Proprietary",
                 ]
                 max_text_width = about_panel_rect.width - 48
-                text_y = about_panel_rect.y + 58
+                text_y = about_panel_rect.y + 70
                 for line in about_lines:
                     if not line:
                         text_y += 10
